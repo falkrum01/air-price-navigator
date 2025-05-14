@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { Airplane } from "lucide-react";
+import { Plane } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,7 +14,7 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="container mx-auto flex h-16 items-center px-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-2">
             <div className="bg-airblue p-1.5 rounded-md">
-              <Airplane className="h-5 w-5 text-white" />
+              <Plane className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold gradient-text">SkyPredict</span>
           </Link>
