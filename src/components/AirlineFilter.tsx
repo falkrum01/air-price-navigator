@@ -70,6 +70,15 @@ const AirlineFilter: React.FC<AirlineFilterProps> = ({ flights, onFilterChange }
     onFilterChange(newFilters);
   };
 
+  // Format price in Indian Rupees
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(price);
+  };
+
   return (
     <div className="space-y-6 p-4 bg-white rounded-lg shadow-sm">
       <div>
@@ -82,8 +91,8 @@ const AirlineFilter: React.FC<AirlineFilterProps> = ({ flights, onFilterChange }
             onValueChange={handlePriceChange}
           />
           <div className="flex justify-between mt-2 text-sm text-muted-foreground">
-            <span>$0</span>
-            <span>${filters.maxPrice}</span>
+            <span>₹0</span>
+            <span>{formatPrice(filters.maxPrice || 0)}</span>
           </div>
         </div>
       </div>

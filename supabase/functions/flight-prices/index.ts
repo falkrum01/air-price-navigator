@@ -7,6 +7,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Airline logos for major Indian carriers
+const airlineLogos = {
+  "Air India": "https://upload.wikimedia.org/wikipedia/commons/e/e3/Air_India_Logo.svg",
+  "IndiGo": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/IndiGo_Airlines_logo.svg/2560px-IndiGo_Airlines_logo.svg.png",
+  "SpiceJet": "https://upload.wikimedia.org/wikipedia/commons/5/5d/SpiceJet_Logo.svg",
+  "Vistara": "https://upload.wikimedia.org/wikipedia/en/f/f6/Vistara_airline_logo.svg",
+  "Go First": "https://upload.wikimedia.org/wikipedia/en/thumb/c/c4/Go_First_logo.svg/1200px-Go_First_logo.svg.png",
+  "AirAsia India": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/AirAsia_New_Logo.svg/2560px-AirAsia_New_Logo.svg.png",
+  "Alliance Air": "https://upload.wikimedia.org/wikipedia/en/b/b0/Alliance_Air_logo.png",
+  "TruJet": "https://upload.wikimedia.org/wikipedia/commons/8/8c/TruJet_logo.png",
+  "Star Air": "https://upload.wikimedia.org/wikipedia/en/4/48/Star_Air_%28India%29_logo.svg",
+  "Akasa Air": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Akasa_Air_logo.svg/1200px-Akasa_Air_logo.svg.png"
+};
+
+// Website logos for Indian travel portals
+const websiteLogos = {
+  "MakeMyTrip": "https://imgak.mmtcdn.com/pwa_v3/pwa_hotel_assets/header/mmtLogoWhite.png",
+  "Paytm": "https://upload.wikimedia.org/wikipedia/commons/4/42/Paytm_logo.png",
+  "Cleartrip": "https://seeklogo.com/images/C/cleartrip-logo-22AE3BF11E-seeklogo.com.png",
+  "Yatra": "https://upload.wikimedia.org/wikipedia/commons/7/71/Yatra_2018.png",
+  "EaseMyTrip": "https://upload.wikimedia.org/wikipedia/commons/b/b9/EaseMyTrip_Logo.png",
+  "Ixigo": "https://upload.wikimedia.org/wikipedia/commons/a/a7/Ixigo_Logo.png",
+  "Goibibo": "https://upload.wikimedia.org/wikipedia/commons/a/a9/Goibibo_logo.svg"
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -17,6 +42,10 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    
+    // Amadeus API credentials
+    const amadeus_api_key = Deno.env.get('AMADEUS_API_KEY') ?? 'tXAyTZgku1b3VnKfUbjukzUgClFAik0e';
+    const amadeus_api_secret = Deno.env.get('AMADEUS_API_SECRET') ?? 'Ym91W1skpDYgTOHH';
 
     // Parse the request body
     const { origin, destination, departureDate, returnDate, cabinClass, passengers } = await req.json();
@@ -40,33 +69,66 @@ serve(async (req) => {
 
     if (recentCachedData && recentCachedData.length > 0) {
       console.log('Returning cached flight data');
+      
+      // Transform the cached data into the expected format
+      const flights = recentCachedData.map(flight => ({
+        id: flight.id,
+        airline: flight.airline,
+        airlineLogo: airlineLogos[flight.airline] || `https://via.placeholder.com/50?text=${encodeURIComponent(flight.airline)}`,
+        origin: flight.origin,
+        destination: flight.destination,
+        departureTime: "09:00", // These would be available in real API data
+        arrivalTime: "11:30",   // These would be available in real API data
+        duration: "2h 30m",     // These would be available in real API data
+        stops: 0,               // These would be available in real API data
+        price: parseFloat(flight.price),
+        website: Object.keys(websiteLogos)[Math.floor(Math.random() * Object.keys(websiteLogos).length)],
+        websiteLogo: Object.values(websiteLogos)[Math.floor(Math.random() * Object.values(websiteLogos).length)],
+        departureDate: flight.departure_date,
+        returnDate: flight.return_date,
+        class: flight.class,
+        currency: flight.currency
+      }));
+      
       return new Response(JSON.stringify({ 
-        flights: recentCachedData,
+        flights,
         source: 'cache'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // In a real implementation, we would call an external flight API here
-    // For demonstration, we'll generate realistic mock data for Indian airlines
-    const indianAirlines = [
-      { name: "Air India", logo: "https://via.placeholder.com/50?text=AirIndia" },
-      { name: "IndiGo", logo: "https://via.placeholder.com/50?text=IndiGo" },
-      { name: "SpiceJet", logo: "https://via.placeholder.com/50?text=SpiceJet" },
-      { name: "Vistara", logo: "https://via.placeholder.com/50?text=Vistara" },
-      { name: "Go First", logo: "https://via.placeholder.com/50?text=GoFirst" },
-      { name: "Air Asia India", logo: "https://via.placeholder.com/50?text=AirAsia" },
-    ];
+    // In a real implementation, we would call the Amadeus API here
+    // For now, we'll generate realistic mock data for Indian airlines
     
-    const travelWebsites = [
-      { name: "MakeMyTrip", logo: "https://via.placeholder.com/50?text=MMT" },
-      { name: "Paytm", logo: "https://via.placeholder.com/50?text=Paytm" },
-      { name: "Cleartrip", logo: "https://via.placeholder.com/50?text=CT" },
-      { name: "Yatra", logo: "https://via.placeholder.com/50?text=Yatra" },
-      { name: "EaseMyTrip", logo: "https://via.placeholder.com/50?text=EMT" },
-      { name: "Ixigo", logo: "https://via.placeholder.com/50?text=Ixigo" },
-    ];
+    // Try to get an Amadeus access token (in a real implementation)
+    let amadeus_token = null;
+    try {
+      const tokenResponse = await fetch('https://test.api.amadeus.com/v1/security/oauth2/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          'grant_type': 'client_credentials',
+          'client_id': amadeus_api_key,
+          'client_secret': amadeus_api_secret
+        })
+      });
+      
+      if (tokenResponse.ok) {
+        const tokenData = await tokenResponse.json();
+        amadeus_token = tokenData.access_token;
+        console.log('Successfully obtained Amadeus access token');
+      } else {
+        console.error('Error getting Amadeus token:', await tokenResponse.text());
+      }
+    } catch (error) {
+      console.error('Exception getting Amadeus token:', error);
+    }
+    
+    // List of real Indian airlines
+    const indianAirlines = Object.keys(airlineLogos);
     
     // Generate a consistent base price based on the route
     const originCode = origin.charCodeAt(0) + origin.charCodeAt(1) + origin.charCodeAt(2);
@@ -93,6 +155,9 @@ serve(async (req) => {
     // Generate flights
     const flightCount = 10 + (routeHash % 10); // 10-20 flights
     const flights = [];
+    
+    // Travel websites in India
+    const travelWebsites = Object.keys(websiteLogos);
     
     for (let i = 0; i < flightCount; i++) {
       const airline = indianAirlines[i % indianAirlines.length];
@@ -130,8 +195,8 @@ serve(async (req) => {
       // Create the flight object
       const flight = {
         id: `flight-${i}-${Date.now()}`,
-        airline: airline.name,
-        airlineLogo: airline.logo,
+        airline,
+        airlineLogo: airlineLogos[airline] || `https://via.placeholder.com/50?text=${encodeURIComponent(airline)}`,
         origin,
         destination,
         departureTime,
@@ -139,8 +204,8 @@ serve(async (req) => {
         duration: `${durationHours}h ${durationMinutes}m`,
         stops,
         price,
-        website: website.name,
-        websiteLogo: website.logo,
+        website,
+        websiteLogo: websiteLogos[website] || `https://via.placeholder.com/50?text=${encodeURIComponent(website)}`,
         departureDate,
         returnDate: returnDate || null,
         class: cabinClass,
@@ -150,27 +215,31 @@ serve(async (req) => {
       flights.push(flight);
       
       // Store in database for caching
-      const { error: insertError } = await supabase
-        .from('flight_data')
-        .upsert({
-          origin,
-          destination,
-          departure_date: departureDate,
-          return_date: returnDate || null,
-          airline: airline.name,
-          price,
-          currency: 'INR',
-          class: cabinClass,
-          cached_at: new Date().toISOString()
-        });
-      
-      if (insertError) {
-        console.error('Error caching flight data:', insertError);
+      try {
+        const { error: insertError } = await supabase
+          .from('flight_data')
+          .upsert({
+            origin,
+            destination,
+            departure_date: departureDate,
+            return_date: returnDate || null,
+            airline: airline,
+            price,
+            currency: 'INR',
+            class: cabinClass,
+            cached_at: new Date().toISOString()
+          });
+        
+        if (insertError) {
+          console.error('Error caching flight data:', insertError);
+        }
+      } catch (err) {
+        console.error('Exception caching flight data:', err);
       }
     }
     
     // Also generate and store price predictions
-    await generatePricePredictions(supabase, origin, destination, departureDate, basePrice);
+    await generatePricePredictions(supabase, origin, destination, departureDate, basePrice, amadeus_token);
     
     return new Response(JSON.stringify({ 
       flights: flights.sort((a, b) => a.price - b.price),
@@ -187,10 +256,20 @@ serve(async (req) => {
   }
 });
 
-async function generatePricePredictions(supabase, origin, destination, departureDate, basePrice) {
+async function generatePricePredictions(supabase, origin, destination, departureDate, basePrice, amadeus_token) {
   try {
     const startDate = new Date(departureDate);
     const predictions = [];
+    
+    // If we have an Amadeus token, we could try to get real price predictions
+    if (amadeus_token) {
+      try {
+        console.log('Would use Amadeus API for real predictions if this was a production implementation');
+        // In a real implementation, we would call Amadeus Price Forecast endpoint here
+      } catch (error) {
+        console.error('Error calling Amadeus API:', error);
+      }
+    }
     
     // Generate predictions for 30 days around the departure date
     for (let i = -7; i <= 22; i++) {
@@ -229,22 +308,26 @@ async function generatePricePredictions(supabase, origin, destination, departure
       const confidence = Math.floor(Math.random() * 25) + 70;
       
       // Store in the database
-      const { error: predictionError } = await supabase
-        .from('price_predictions')
-        .upsert({
-          origin,
-          destination,
-          date: dateString,
-          lowest_price: lowestPrice,
-          highest_price: highestPrice,
-          average_price: averagePrice,
-          recommendation,
-          confidence,
-          last_updated: new Date().toISOString()
-        });
-      
-      if (predictionError) {
-        console.error('Error storing price prediction:', predictionError);
+      try {
+        const { error: predictionError } = await supabase
+          .from('price_predictions')
+          .upsert({
+            origin,
+            destination,
+            date: dateString,
+            lowest_price: lowestPrice,
+            highest_price: highestPrice,
+            average_price: averagePrice,
+            recommendation,
+            confidence,
+            last_updated: new Date().toISOString()
+          });
+        
+        if (predictionError) {
+          console.error('Error storing price prediction:', predictionError);
+        }
+      } catch (err) {
+        console.error('Exception storing price prediction:', err);
       }
     }
   } catch (error) {
