@@ -5,13 +5,15 @@ import AirlineFilter from "./AirlineFilter";
 import FlightCard from "./FlightCard";
 import { Flight, SearchParams, FilterParams } from "@/types/flight";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 interface PriceComparisonProps {
   searchParams: SearchParams;
   loading: boolean;
 }
 
-const PriceComparison: React.FC<PriceComparisonProps> = ({ searchParams, loading }) => {
+const PriceComparison: React.FC<PriceComparisonProps> = ({ searchParams, loading: initialLoading }) => {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [filteredFlights, setFilteredFlights] = useState<Flight[]>([]);
   const [sortBy, setSortBy] = useState<"price" | "duration" | "departure">("price");
@@ -19,88 +21,61 @@ const PriceComparison: React.FC<PriceComparisonProps> = ({ searchParams, loading
     airlines: [],
     websites: [],
   });
+  const [loading, setLoading] = useState<boolean>(initialLoading);
+  const [dataSource, setDataSource] = useState<string>("loading");
 
-  // Generate mock flight data
   useEffect(() => {
-    if (!searchParams) return;
-
-    // Mock airline data
-    const mockAirlines = [
-      { name: "Delta Air Lines", logo: "https://via.placeholder.com/50?text=Delta" },
-      { name: "United Airlines", logo: "https://via.placeholder.com/50?text=United" },
-      { name: "American Airlines", logo: "https://via.placeholder.com/50?text=AA" },
-      { name: "Southwest", logo: "https://via.placeholder.com/50?text=SW" },
-      { name: "JetBlue", logo: "https://via.placeholder.com/50?text=JB" },
-    ];
-
-    // Mock website data
-    const mockWebsites = [
-      { name: "Expedia", logo: "https://via.placeholder.com/50?text=Expedia" },
-      { name: "Kayak", logo: "https://via.placeholder.com/50?text=Kayak" },
-      { name: "Orbitz", logo: "https://via.placeholder.com/50?text=Orbitz" },
-      { name: "Priceline", logo: "https://via.placeholder.com/50?text=PL" },
-      { name: "Skyscanner", logo: "https://via.placeholder.com/50?text=Sky" },
-    ];
-
-    // Create mock flight data
-    const mockFlights: Flight[] = [];
-
-    // Generate 10-20 random flights
-    const flightCount = Math.floor(Math.random() * 10) + 10;
-
-    for (let i = 0; i < flightCount; i++) {
-      // Random airline
-      const airline = mockAirlines[Math.floor(Math.random() * mockAirlines.length)];
+    const fetchFlights = async () => {
+      if (!searchParams) return;
       
-      // Random website
-      const website = mockWebsites[Math.floor(Math.random() * mockWebsites.length)];
+      setLoading(true);
       
-      // Random departure time (between 6am and 10pm)
-      const departureHour = Math.floor(Math.random() * 16) + 6;
-      const departureMinute = Math.floor(Math.random() * 60);
-      const departureTime = `${departureHour.toString().padStart(2, "0")}:${departureMinute.toString().padStart(2, "0")}`;
-      
-      // Random flight duration (between 1 and 8 hours)
-      const durationHours = Math.floor(Math.random() * 7) + 1;
-      const durationMinutes = Math.floor(Math.random() * 60);
-      
-      // Calculate arrival time
-      let arrivalHour = departureHour + durationHours;
-      let arrivalMinute = departureMinute + durationMinutes;
-      
-      if (arrivalMinute >= 60) {
-        arrivalHour += 1;
-        arrivalMinute -= 60;
+      try {
+        // Call the Supabase edge function to get flight data
+        const { data, error } = await supabase.functions.invoke('flight-prices', {
+          body: {
+            origin: searchParams.origin,
+            destination: searchParams.destination,
+            departureDate: searchParams.departureDate,
+            returnDate: searchParams.returnDate,
+            cabinClass: searchParams.cabinClass,
+            passengers: searchParams.passengers
+          }
+        });
+        
+        if (error) {
+          console.error('Error fetching flight data:', error);
+          toast({
+            title: "Error fetching flights",
+            description: "Could not retrieve flight information. Please try again later.",
+            variant: "destructive"
+          });
+          setFlights([]);
+        } else {
+          setFlights(data.flights);
+          setDataSource(data.source);
+          
+          if (data.source === 'cache') {
+            toast({
+              title: "Using recent flight data",
+              description: "Showing flight prices from our cache (less than 1 hour old)."
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error in flight data fetch:', err);
+        toast({
+          title: "Connection error",
+          description: "Could not connect to flight search service. Please try again later.",
+          variant: "destructive"
+        });
+        setFlights([]);
+      } finally {
+        setLoading(false);
       }
-      
-      arrivalHour = arrivalHour % 24;
-      
-      const arrivalTime = `${arrivalHour.toString().padStart(2, "0")}:${arrivalMinute.toString().padStart(2, "0")}`;
-      
-      // Random number of stops
-      const stops = Math.floor(Math.random() * 3);
-      
-      // Random price (between $100 and $1000)
-      const price = Math.floor(Math.random() * 900) + 100;
-      
-      mockFlights.push({
-        id: `flight-${i}`,
-        airline: airline.name,
-        airlineLogo: airline.logo,
-        origin: searchParams.origin,
-        destination: searchParams.destination,
-        departureTime,
-        arrivalTime,
-        duration: `${durationHours}h ${durationMinutes}m`,
-        stops,
-        price,
-        website: website.name,
-        websiteLogo: website.logo,
-      });
-    }
+    };
 
-    setFlights(mockFlights);
-    setFilteredFlights(mockFlights);
+    fetchFlights();
   }, [searchParams]);
 
   useEffect(() => {
@@ -197,9 +172,14 @@ const PriceComparison: React.FC<PriceComparisonProps> = ({ searchParams, loading
       <div className="md:col-span-3">
         <div className="bg-white p-4 rounded-lg mb-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold">
-              {filteredFlights.length} flights found
-            </h2>
+            <div>
+              <h2 className="text-lg font-semibold">
+                {filteredFlights.length} flights found
+              </h2>
+              {dataSource === 'cache' && (
+                <p className="text-xs text-gray-500">Using cached prices (less than 1 hour old)</p>
+              )}
+            </div>
             <div className="flex space-x-2">
               <Button
                 size="sm"

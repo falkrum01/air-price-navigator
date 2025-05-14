@@ -5,6 +5,7 @@ import SearchForm from "./SearchForm";
 import PriceComparison from "./PriceComparison";
 import PricePrediction from "./PricePrediction";
 import { SearchParams } from "@/types/flight";
+import { toast } from "@/components/ui/use-toast";
 
 const FlightSearch: React.FC = () => {
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
@@ -12,13 +13,33 @@ const FlightSearch: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("comparison");
 
   const handleSearch = (params: SearchParams) => {
+    if (!params.origin || !params.destination) {
+      toast({
+        title: "Search Error",
+        description: "Please select both origin and destination airports.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (params.origin === params.destination) {
+      toast({
+        title: "Search Error",
+        description: "Origin and destination airports cannot be the same.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setLoading(true);
     setSearchParams(params);
     
-    // Simulate API call with timeout
-    setTimeout(() => {
-      setLoading(false);
-    }, 1500);
+    toast({
+      title: "Searching Flights",
+      description: `Finding flights from ${params.origin} to ${params.destination}`,
+    });
+    
+    // The loading state will be handled by the child components
   };
 
   return (
@@ -40,14 +61,14 @@ const FlightSearch: React.FC = () => {
                 <TabsContent value="comparison" className="mt-0">
                   <PriceComparison 
                     searchParams={searchParams}
-                    loading={loading}
+                    loading={loading && activeTab === "comparison"}
                   />
                 </TabsContent>
                 
                 <TabsContent value="prediction" className="mt-0">
                   <PricePrediction
                     searchParams={searchParams}
-                    loading={loading}
+                    loading={loading && activeTab === "prediction"}
                   />
                 </TabsContent>
               </div>

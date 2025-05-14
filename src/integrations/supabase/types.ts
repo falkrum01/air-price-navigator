@@ -9,7 +9,84 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      flight_data: {
+        Row: {
+          airline: string
+          cached_at: string
+          class: string
+          currency: string
+          departure_date: string
+          destination: string
+          id: string
+          origin: string
+          price: number
+          return_date: string | null
+        }
+        Insert: {
+          airline: string
+          cached_at?: string
+          class: string
+          currency?: string
+          departure_date: string
+          destination: string
+          id?: string
+          origin: string
+          price: number
+          return_date?: string | null
+        }
+        Update: {
+          airline?: string
+          cached_at?: string
+          class?: string
+          currency?: string
+          departure_date?: string
+          destination?: string
+          id?: string
+          origin?: string
+          price?: number
+          return_date?: string | null
+        }
+        Relationships: []
+      }
+      price_predictions: {
+        Row: {
+          average_price: number
+          confidence: number
+          date: string
+          destination: string
+          highest_price: number
+          id: string
+          last_updated: string
+          lowest_price: number
+          origin: string
+          recommendation: string
+        }
+        Insert: {
+          average_price: number
+          confidence: number
+          date: string
+          destination: string
+          highest_price: number
+          id?: string
+          last_updated?: string
+          lowest_price: number
+          origin: string
+          recommendation: string
+        }
+        Update: {
+          average_price?: number
+          confidence?: number
+          date?: string
+          destination?: string
+          highest_price?: number
+          id?: string
+          last_updated?: string
+          lowest_price?: number
+          origin?: string
+          recommendation?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
