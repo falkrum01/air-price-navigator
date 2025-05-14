@@ -23,10 +23,10 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
     websiteLogo,
   } = flight;
 
-  // Format the price to include currency symbol and no decimal places
-  const formattedPrice = new Intl.NumberFormat("en-US", {
+  // Format the price to include INR currency symbol and no decimal places
+  const formattedPrice = new Intl.NumberFormat("en-IN", {
     style: "currency",
-    currency: "USD",
+    currency: "INR",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(price);

@@ -30,6 +30,7 @@ export interface SearchParams {
   returnDate?: string;
   passengers: number;
   cabinClass: 'economy' | 'business' | 'first';
+  currency?: string;
 }
 
 export interface FilterParams {

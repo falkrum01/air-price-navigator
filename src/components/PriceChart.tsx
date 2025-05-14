@@ -29,9 +29,9 @@ const PriceChart: React.FC<PriceChartProps> = ({ predictions, originCity, destin
 
   // Format the price with currency
   const formatPrice = (price: number) =>
-    new Intl.NumberFormat("en-US", {
+    new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "USD",
+      currency: "INR",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(price);
@@ -39,7 +39,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ predictions, originCity, destin
   // Format the date for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString("en-IN", {
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -80,7 +80,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ predictions, originCity, destin
                 tick={{ fontSize: 12 }}
               />
               <YAxis
-                tickFormatter={(value) => `$${value}`}
+                tickFormatter={(value) => `₹${value}`}
                 tick={{ fontSize: 12 }}
               />
               <Tooltip
