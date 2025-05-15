@@ -31,16 +31,60 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
     maximumFractionDigits: 0,
   }).format(price);
 
+  // Handle external website navigation
+  const handleSelect = () => {
+    // Construct a URL based on the website name
+    let bookingUrl = "";
+    switch (website.toLowerCase()) {
+      case "paytm":
+        bookingUrl = `https://tickets.paytm.com/flights/flightSearch/${origin}-${destination}/1/0/0/E`;
+        break;
+      case "goibibo":
+        bookingUrl = `https://www.goibibo.com/flights/air-${origin.toLowerCase()}-${destination.toLowerCase()}/`;
+        break;
+      case "makemytrip":
+        bookingUrl = `https://www.makemytrip.com/flight/search?itinerary=${origin}-${destination}`;
+        break;
+      case "cleartrip":
+        bookingUrl = `https://www.cleartrip.com/flights/results?origin=${origin}&destination=${destination}`;
+        break;
+      case "ixigo":
+        bookingUrl = `https://www.ixigo.com/flights/search/${origin}-${destination}`;
+        break;
+      case "yatra":
+        bookingUrl = `https://www.yatra.com/flights/search/dom/${origin}-${destination}`;
+        break;
+      case "easemytrip":
+        bookingUrl = `https://www.easemytrip.com/flights/${origin.toLowerCase()}-${destination.toLowerCase()}`; 
+        break;
+      default:
+        bookingUrl = `https://www.google.com/search?q=${website}+flights+${origin}+to+${destination}`;
+    }
+    
+    // Open in a new tab
+    window.open(bookingUrl, '_blank');
+  };
+
   return (
     <div className="bg-white border rounded-lg p-4 mb-4 transition-all hover:shadow-md animate-fade-in">
       <div className="flex justify-between flex-wrap gap-4">
         {/* Airline info */}
         <div className="flex items-center space-x-3">
-          <img
-            src={airlineLogo || "/placeholder.svg"}
-            alt={airline}
-            className="w-8 h-8 object-contain"
-          />
+          {airlineLogo ? (
+            <img
+              src={airlineLogo}
+              alt={airline}
+              className="w-10 h-10 object-contain"
+              onError={(e) => {
+                // Fallback if image fails to load
+                (e.target as HTMLImageElement).src = "/placeholder.svg";
+              }}
+            />
+          ) : (
+            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
+              {airline.substring(0, 2)}
+            </div>
+          )}
           <div>
             <p className="font-medium">{airline}</p>
             <p className="text-xs text-muted-foreground">
@@ -55,11 +99,21 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
 
         {/* Website info */}
         <div className="flex items-center space-x-3">
-          <img
-            src={websiteLogo || "/placeholder.svg"}
-            alt={website}
-            className="w-8 h-8 object-contain"
-          />
+          {websiteLogo ? (
+            <img
+              src={websiteLogo}
+              alt={website}
+              className="w-10 h-10 object-contain"
+              onError={(e) => {
+                // Fallback if image fails to load
+                (e.target as HTMLImageElement).src = "/placeholder.svg";
+              }}
+            />
+          ) : (
+            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
+              {website.substring(0, 2)}
+            </div>
+          )}
           <span className="text-sm font-medium">{website}</span>
         </div>
       </div>
@@ -89,7 +143,10 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
         {/* Price and booking button */}
         <div className="flex flex-col items-center justify-center">
           <p className="text-2xl font-bold text-airblue mb-2">{formattedPrice}</p>
-          <Button className="w-full bg-airorange hover:bg-airorange/90">
+          <Button 
+            className="w-full bg-airorange hover:bg-airorange/90"
+            onClick={handleSelect}
+          >
             Select
           </Button>
         </div>
