@@ -116,7 +116,7 @@ const AirlineFilter: React.FC<AirlineFilterProps> = ({ flights, onFilterChange }
 
       <div>
         <h3 className="font-medium mb-3">Airlines</h3>
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
           {airlines.map((airline) => (
             <div key={airline} className="flex items-center space-x-2">
               <Checkbox
@@ -127,9 +127,16 @@ const AirlineFilter: React.FC<AirlineFilterProps> = ({ flights, onFilterChange }
               />
               <Label
                 htmlFor={`airline-${airline}`}
-                className="text-sm font-normal"
+                className="text-sm font-normal flex items-center"
               >
                 {airline}
+                {flights.find(f => f.airline === airline)?.airlineLogo && (
+                  <img 
+                    src={flights.find(f => f.airline === airline)?.airlineLogo} 
+                    alt={airline}
+                    className="h-4 w-auto ml-2 object-contain"
+                  />
+                )}
               </Label>
             </div>
           ))}
@@ -138,7 +145,7 @@ const AirlineFilter: React.FC<AirlineFilterProps> = ({ flights, onFilterChange }
 
       <div>
         <h3 className="font-medium mb-3">Websites</h3>
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
           {websites.map((website) => (
             <div key={website} className="flex items-center space-x-2">
               <Checkbox
@@ -149,9 +156,16 @@ const AirlineFilter: React.FC<AirlineFilterProps> = ({ flights, onFilterChange }
               />
               <Label
                 htmlFor={`website-${website}`}
-                className="text-sm font-normal"
+                className="text-sm font-normal flex items-center"
               >
                 {website}
+                {flights.find(f => f.website === website)?.websiteLogo && (
+                  <img 
+                    src={flights.find(f => f.website === website)?.websiteLogo} 
+                    alt={website}
+                    className="h-4 w-auto ml-2 object-contain"
+                  />
+                )}
               </Label>
             </div>
           ))}
