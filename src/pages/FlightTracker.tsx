@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import FlightTrackerMap from "@/components/FlightTrackerMap";
@@ -314,11 +315,21 @@ const FlightTracker: React.FC = () => {
               </div>
               
               <div className="relative h-[70vh]">
-                <FlightTrackerMap 
-                  flights={filteredFlights} 
-                  selectedFlight={selectedFlight}
-                  onSelectFlight={handleSelectFlight}
-                />
+                {flights.length > 0 && (
+                  <FlightTrackerMap 
+                    flights={filteredFlights} 
+                    selectedFlight={selectedFlight}
+                    onSelectFlight={handleSelectFlight}
+                  />
+                )}
+                {loading && flights.length === 0 && (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="flex flex-col items-center">
+                      <RefreshCw className="h-8 w-8 animate-spin text-airblue mb-4" />
+                      <p className="text-lg text-gray-600">Loading flights...</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

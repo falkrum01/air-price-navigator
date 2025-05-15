@@ -70,7 +70,7 @@ const FlightTrackerMap: React.FC<FlightTrackerMapProps> = ({ flights, selectedFl
       // Create Earth
       const earthGeometry = new THREE.SphereGeometry(1, 64, 64);
       
-      // We'll use a basic material with a blue color for Earth (in a production app, use a proper texture)
+      // We'll use a basic material with a blue color for Earth
       const earthMaterial = new THREE.MeshPhongMaterial({
         color: 0x2233aa,
         emissive: 0x112244,
@@ -95,7 +95,7 @@ const FlightTrackerMap: React.FC<FlightTrackerMapProps> = ({ flights, selectedFl
       const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
       scene.add(wireframe);
       
-      // Add basic country outlines for reference (in a production app, use GeoJSON data)
+      // Utility function for converting lat/long to 3D coordinates
       const latLongToVector3 = (lat: number, lon: number, radius: number = 1) => {
         const phi = (90 - lat) * Math.PI / 180;
         const theta = (lon + 180) * Math.PI / 180;
@@ -152,7 +152,6 @@ const FlightTrackerMap: React.FC<FlightTrackerMapProps> = ({ flights, selectedFl
       
       // Animation loop
       let animationFrameId: number;
-      const startTime = Date.now();
       
       const animate = () => {
         animationFrameId = requestAnimationFrame(animate);
