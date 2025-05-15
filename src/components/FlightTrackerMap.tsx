@@ -287,7 +287,7 @@ const FlightTrackerMap: React.FC<FlightTrackerMapProps> = ({ flights, selectedFl
         delete flightMarkers[id];
       }
     });
-  }, [flights, selectedFlight]);
+  }, [flights, selectedFlight, onSelectFlight]);
   
   return (
     <div ref={mapContainerRef} className="w-full h-full"></div>

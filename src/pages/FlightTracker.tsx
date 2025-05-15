@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import FlightTrackerMap from "@/components/FlightTrackerMap";
@@ -158,6 +157,11 @@ const FlightTracker: React.FC = () => {
   // Get unique countries for the filter
   const countries = [...new Set(flights.map(flight => flight.origin_country))].sort();
 
+  // Change this function to explicitly match the expected type in FlightTrackerMap
+  const handleSelectFlight = (flight: Flight) => {
+    setSelectedFlight(flight);
+  };
+
   return (
     <Layout>
       <div className="bg-gray-50 min-h-screen">
@@ -313,7 +317,7 @@ const FlightTracker: React.FC = () => {
                 <FlightTrackerMap 
                   flights={filteredFlights} 
                   selectedFlight={selectedFlight}
-                  onSelectFlight={setSelectedFlight}
+                  onSelectFlight={handleSelectFlight}
                 />
               </div>
             </div>
