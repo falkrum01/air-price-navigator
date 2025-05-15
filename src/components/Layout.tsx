@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Plane } from "lucide-react";
 
 interface LayoutProps {
@@ -8,6 +8,8 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
+  const location = useLocation();
+  
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="border-b border-border bg-white shadow-sm">
@@ -19,8 +21,11 @@ const Layout = ({ children }: LayoutProps) => {
             <span className="text-xl font-bold gradient-text">SkyPredict</span>
           </Link>
           <div className="ml-auto flex items-center space-x-4">
-            <Link to="/" className="text-sm font-medium hover:text-airblue">
+            <Link to="/" className={`text-sm font-medium ${location.pathname === '/' ? 'text-airblue' : 'hover:text-airblue'}`}>
               Find Flights
+            </Link>
+            <Link to="/flight-tracker" className={`text-sm font-medium ${location.pathname === '/flight-tracker' ? 'text-airblue' : 'hover:text-airblue'}`}>
+              Flight Tracker
             </Link>
             <Link to="/" className="text-sm font-medium hover:text-airblue">
               My Trips
