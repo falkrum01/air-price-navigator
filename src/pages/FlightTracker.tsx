@@ -155,17 +155,24 @@ const FlightTracker: React.FC = () => {
   // Handle flight selection
   const handleSelectFlight = (flight: Flight) => {
     setSelectedFlight(flight);
-    
-    // Create a flight ID for FlightRadar24 URL (use callsign or icao24)
-    const flightId = flight.callsign?.trim() || flight.icao24;
-    
-    // Open FlightRadar24 in a new tab
-    window.open(`https://www.flightradar24.com/${flightId}`, '_blank');
   };
 
   // Open general FlightRadar24 website
   const openFlightRadar = () => {
     window.open("https://www.flightradar24.com/14.90,78.33/5", '_blank');
+  };
+  
+  // Open specific flight on FlightRadar24
+  const openFlightDetails = () => {
+    if (selectedFlight) {
+      const flightId = selectedFlight.callsign?.trim() || selectedFlight.icao24;
+      window.open(`https://www.flightradar24.com/${flightId}`, '_blank');
+    }
+  };
+  
+  // Format a timestamp from Unix time
+  const formatTimestamp = (timestamp: number): string => {
+    return new Date(timestamp * 1000).toLocaleTimeString();
   };
 
   return (
@@ -276,29 +283,106 @@ const FlightTracker: React.FC = () => {
               {showStats && (
                 <Card className="mt-4">
                   <CardContent className="p-4">
-                    <h3 className="text-lg font-semibold mb-3">Stats</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="border rounded-md p-3 text-center">
-                        <div className="text-2xl font-bold text-airblue">{flights.length}</div>
-                        <div className="text-xs text-gray-500">Total Flights</div>
-                      </div>
-                      <div className="border rounded-md p-3 text-center">
-                        <div className="text-2xl font-bold text-airblue">{countries.length}</div>
-                        <div className="text-xs text-gray-500">Countries</div>
-                      </div>
-                      <div className="border rounded-md p-3 text-center">
-                        <div className="text-2xl font-bold text-airblue">
-                          {flights.filter(f => !f.on_ground).length}
+                    <h3 className="text-lg font-semibold mb-3 flex justify-between">
+                      <span>{selectedFlight ? `Flight Details: ${selectedFlight.callsign}` : 'Statistics'}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 p-0" 
+                        onClick={() => setShowStats(false)}
+                      >
+                        <span className="sr-only">Close</span>
+                        ×
+                      </Button>
+                    </h3>
+                    
+                    {selectedFlight ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="border rounded-md p-2">
+                            <div className="text-xs text-gray-500">Callsign</div>
+                            <div className="font-medium">{selectedFlight.callsign}</div>
+                          </div>
+                          <div className="border rounded-md p-2">
+                            <div className="text-xs text-gray-500">Airline</div>
+                            <div className="font-medium">{selectedFlight.airline || "Unknown"}</div>
+                          </div>
+                          <div className="border rounded-md p-2">
+                            <div className="text-xs text-gray-500">ICAO</div>
+                            <div className="font-medium">{selectedFlight.icao24}</div>
+                          </div>
+                          <div className="border rounded-md p-2">
+                            <div className="text-xs text-gray-500">Country</div>
+                            <div className="font-medium">{selectedFlight.origin_country}</div>
+                          </div>
+                          <div className="border rounded-md p-2">
+                            <div className="text-xs text-gray-500">Status</div>
+                            <div className="font-medium">{selectedFlight.on_ground ? "On Ground" : "In Air"}</div>
+                          </div>
+                          <div className="border rounded-md p-2">
+                            <div className="text-xs text-gray-500">Altitude</div>
+                            <div className="font-medium">{Math.round(selectedFlight.baro_altitude)} m</div>
+                          </div>
+                          <div className="border rounded-md p-2">
+                            <div className="text-xs text-gray-500">Speed</div>
+                            <div className="font-medium">{Math.round(selectedFlight.velocity * 3.6)} km/h</div>
+                          </div>
+                          <div className="border rounded-md p-2">
+                            <div className="text-xs text-gray-500">Heading</div>
+                            <div className="font-medium">{Math.round(selectedFlight.true_track)}°</div>
+                          </div>
+                          <div className="border rounded-md p-2">
+                            <div className="text-xs text-gray-500">Vertical Rate</div>
+                            <div className="font-medium">{selectedFlight.vertical_rate.toFixed(1)} m/s</div>
+                          </div>
+                          <div className="border rounded-md p-2">
+                            <div className="text-xs text-gray-500">Position</div>
+                            <div className="font-medium text-xs">{selectedFlight.latitude.toFixed(4)}, {selectedFlight.longitude.toFixed(4)}</div>
+                          </div>
+                          {selectedFlight.squawk && (
+                            <div className="border rounded-md p-2">
+                              <div className="text-xs text-gray-500">Squawk</div>
+                              <div className="font-medium">{selectedFlight.squawk}</div>
+                            </div>
+                          )}
+                          <div className="border rounded-md p-2">
+                            <div className="text-xs text-gray-500">Last Contact</div>
+                            <div className="font-medium">{formatTimestamp(selectedFlight.last_contact)}</div>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500">In Air</div>
+
+                        <Button 
+                          className="w-full mt-2" 
+                          onClick={openFlightDetails}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Track on FlightRadar24
+                        </Button>
                       </div>
-                      <div className="border rounded-md p-3 text-center">
-                        <div className="text-2xl font-bold text-airblue">
-                          {flights.filter(f => f.on_ground).length}
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="border rounded-md p-3 text-center">
+                          <div className="text-2xl font-bold text-airblue">{flights.length}</div>
+                          <div className="text-xs text-gray-500">Total Flights</div>
                         </div>
-                        <div className="text-xs text-gray-500">On Ground</div>
+                        <div className="border rounded-md p-3 text-center">
+                          <div className="text-2xl font-bold text-airblue">{countries.length}</div>
+                          <div className="text-xs text-gray-500">Countries</div>
+                        </div>
+                        <div className="border rounded-md p-3 text-center">
+                          <div className="text-2xl font-bold text-airblue">
+                            {flights.filter(f => !f.on_ground).length}
+                          </div>
+                          <div className="text-xs text-gray-500">In Air</div>
+                        </div>
+                        <div className="border rounded-md p-3 text-center">
+                          <div className="text-2xl font-bold text-airblue">
+                            {flights.filter(f => f.on_ground).length}
+                          </div>
+                          <div className="text-xs text-gray-500">On Ground</div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -314,7 +398,7 @@ const FlightTracker: React.FC = () => {
                     size="sm"
                     onClick={() => setShowStats(!showStats)}
                   >
-                    Toggle Stats
+                    {showStats ? "Hide Stats" : "Show Stats"}
                   </Button>
                   <Button 
                     variant="default"
@@ -353,71 +437,6 @@ const FlightTracker: React.FC = () => {
           </div>
           
           {/* Selected flight details panel */}
-          {selectedFlight && (
-            <Card className="mt-4">
-              <CardContent className="p-4">
-                <div className="flex justify-between">
-                  <h3 className="text-xl font-semibold">Flight Details: {selectedFlight.callsign}</h3>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const flightId = selectedFlight.callsign?.trim() || selectedFlight.icao24;
-                        window.open(`https://www.flightradar24.com/${flightId}`, '_blank');
-                      }}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Track This Flight
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedFlight(null)}>
-                      Close
-                    </Button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Airline</h4>
-                    <p>{selectedFlight.airline || "Unknown"}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Origin Country</h4>
-                    <p>{selectedFlight.origin_country}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Status</h4>
-                    <p>{selectedFlight.on_ground ? "On Ground" : "In Air"}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Altitude</h4>
-                    <p>{Math.round(selectedFlight.baro_altitude)} meters</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Speed</h4>
-                    <p>{Math.round(selectedFlight.velocity)} m/s ({Math.round(selectedFlight.velocity * 3.6)} km/h)</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Heading</h4>
-                    <p>{Math.round(selectedFlight.true_track)}°</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Position</h4>
-                    <p>
-                      {selectedFlight.latitude.toFixed(4)}, {selectedFlight.longitude.toFixed(4)}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Vertical Rate</h4>
-                    <p>{selectedFlight.vertical_rate.toFixed(1)} m/s</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">Last Updated</h4>
-                    <p>{new Date(selectedFlight.last_contact * 1000).toLocaleTimeString()}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
           
           {/* Disclaimer */}
           <div className="mt-6 text-center">
