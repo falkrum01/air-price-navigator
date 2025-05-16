@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
-import FlightTrackerMap from "@/components/FlightTrackerMap";
 import { Plane, Filter, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +15,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 // Interface for flight data
 interface Flight {
@@ -49,6 +48,20 @@ const FlightTracker: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [dataTimestamp, setDataTimestamp] = useState<Date>(new Date());
   const [showStats, setShowStats] = useState<boolean>(true);
+
+  // Redirect to FlightRadar24 when component mounts
+  useEffect(() => {
+    // Open FlightRadar24 in a new tab without showing the URL
+    const openFlightRadar = () => {
+      const flightRadarUrl = "https://www.flightradar24.com/14.90,78.33/5";
+      window.open(flightRadarUrl, "_blank", "noopener,noreferrer");
+    };
+    
+    // Execute after a short delay to ensure the component is mounted
+    const timer = setTimeout(openFlightRadar, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Mock function to fetch flights - in a real app, this would call the OpenSky API
   const fetchFlights = async () => {
@@ -315,18 +328,28 @@ const FlightTracker: React.FC = () => {
               </div>
               
               <div className="relative h-[70vh]">
-                {flights.length > 0 && (
-                  <FlightTrackerMap 
-                    flights={filteredFlights} 
-                    selectedFlight={selectedFlight}
-                    onSelectFlight={handleSelectFlight}
-                  />
-                )}
                 {loading && flights.length === 0 && (
                   <div className="flex items-center justify-center h-full">
                     <div className="flex flex-col items-center">
                       <RefreshCw className="h-8 w-8 animate-spin text-airblue mb-4" />
                       <p className="text-lg text-gray-600">Loading flights...</p>
+                    </div>
+                  </div>
+                )}
+                
+                {!loading && flights.length > 0 && (
+                  <div className="h-full w-full flex items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-lg mb-4">For live flight tracking, we connect you to FlightRadar24.</p>
+                      <Button
+                        className="bg-airblue"
+                        onClick={() => {
+                          window.open("https://www.flightradar24.com/14.90,78.33/5", "_blank", "noopener,noreferrer");
+                        }}
+                      >
+                        <Plane className="h-5 w-5 mr-2" />
+                        Open Flight Tracker
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -391,8 +414,7 @@ const FlightTracker: React.FC = () => {
           {/* Disclaimer */}
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-500">
-              Note: This is a demonstration using simulated flight data. In a production environment, 
-              this would connect to real flight tracking APIs like OpenSky Network or FlightAware.
+              This is a demonstration using simulated flight data. For real flight tracking, we connect you to FlightRadar24.
             </p>
           </div>
         </div>

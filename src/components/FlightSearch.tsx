@@ -1,16 +1,14 @@
 
 import React, { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SearchForm from "./SearchForm";
 import PriceComparison from "./PriceComparison";
 import PricePrediction from "./PricePrediction";
 import { SearchParams } from "@/types/flight";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 const FlightSearch: React.FC = () => {
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<string>("comparison");
 
   const handleSearch = (params: SearchParams) => {
     if (!params.origin || !params.destination) {
@@ -49,22 +47,13 @@ const FlightSearch: React.FC = () => {
         {searchParams && (
           <div className="col-span-1 flex justify-center">
             <div className="w-full">
-              <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="flex flex-col items-center">
-                <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto">
-                  <TabsTrigger value="comparison">Price Comparison</TabsTrigger>
-                  <TabsTrigger value="prediction">Price Prediction</TabsTrigger>
-                </TabsList>
-
-                <div className="mt-6 w-full">
-                  <TabsContent value="comparison" className="mt-0">
-                    <PriceComparison searchParams={searchParams} loading={loading && activeTab === "comparison"} />
-                  </TabsContent>
-
-                  <TabsContent value="prediction" className="mt-0">
-                    <PricePrediction searchParams={searchParams} loading={loading && activeTab === "prediction"} />
-                  </TabsContent>
+              <div className="mt-6 w-full">
+                {/* Show both components in sequence without tabs */}
+                <div className="space-y-8">
+                  <PriceComparison searchParams={searchParams} loading={loading} />
+                  <PricePrediction searchParams={searchParams} loading={loading} />
                 </div>
-              </Tabs>
+              </div>
             </div>
           </div>
         )}

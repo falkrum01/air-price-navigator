@@ -1,13 +1,16 @@
+
 import React from "react";
 import Layout from "@/components/Layout";
 import FlightSearch from "@/components/FlightSearch";
 import { Plane, Globe, IndianRupee, MapPin, Search, Calendar } from "lucide-react";
+
 const Index: React.FC = () => {
-  return <Layout>
+  return (
+    <Layout>
       {/* Hero Section with Updated Design */}
       <div className="hero-pattern relative py-16 md:py-24 overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src="https://images.unsplash.com/photo-1466442929976-97f336a657be?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80" alt="India background" className="w-full h-full object-cover opacity-15" />
+          <img src="https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80" alt="Sky background" className="w-full h-full object-cover opacity-15" />
           <div className="absolute inset-0 bg-gradient-to-r from-airblue/80 to-purple-700/60"></div>
         </div>
         
@@ -97,7 +100,7 @@ const Index: React.FC = () => {
           <div className="mt-16 bg-gradient-to-r from-airblue/10 to-purple-100 p-6 rounded-lg">
             <div className="flex flex-col md:flex-row items-center">
               <div className="md:w-1/3 mb-6 md:mb-0">
-                <img alt="Indian travel" className="rounded-lg shadow-md w-full" src="https://s44875.pcdn.co/wp-content/uploads/2024/12/Boeing-787-8-768x512.jpg.optimal.jpg" />
+                <img alt="Indian travel" className="rounded-lg shadow-md w-full" src="https://images.unsplash.com/photo-1569154941061-e231b4725ef1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80" />
               </div>
               <div className="md:w-2/3 md:pl-8">
                 <h3 className="text-xl md:text-2xl font-bold mb-4">
@@ -148,7 +151,7 @@ const Index: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-all">
               <div className="flex items-center mb-4">
-                <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80" alt="Priya Sharma" className="h-12 w-12 rounded-full object-cover border-2 border-airblue" />
+                <img src="https://images.unsplash.com/photo-1548142813-c348350df52b?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80" alt="Priya Sharma" className="h-12 w-12 rounded-full object-cover border-2 border-airblue" />
                 <div className="ml-4">
                   <h4 className="font-medium">Priya Sharma</h4>
                   <p className="text-sm text-gray-500">Mumbai</p>
@@ -166,7 +169,7 @@ const Index: React.FC = () => {
             
             <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-all">
               <div className="flex items-center mb-4">
-                <img src="https://images.unsplash.com/photo-1566492031773-4f4e44671857?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80" alt="Vikram Singh" className="h-12 w-12 rounded-full object-cover border-2 border-airblue" />
+                <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80" alt="Vikram Singh" className="h-12 w-12 rounded-full object-cover border-2 border-airblue" />
                 <div className="ml-4">
                   <h4 className="font-medium">Vikram Singh</h4>
                   <p className="text-sm text-gray-500">Hyderabad</p>
@@ -184,7 +187,7 @@ const Index: React.FC = () => {
             
             <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-all">
               <div className="flex items-center mb-4">
-                <img src="https://images.unsplash.com/photo-1573140247632-f8fd74997d5c?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80" alt="Anjali Desai" className="h-12 w-12 rounded-full object-cover border-2 border-airblue" />
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80" alt="Anjali Desai" className="h-12 w-12 rounded-full object-cover border-2 border-airblue" />
                 <div className="ml-4">
                   <h4 className="font-medium">Anjali Desai</h4>
                   <p className="text-sm text-gray-500">Pune</p>
@@ -221,6 +224,8 @@ const Index: React.FC = () => {
           </div>
         </div>
       </div>
-    </Layout>;
+    </Layout>
+  );
 };
+
 export default Index;
