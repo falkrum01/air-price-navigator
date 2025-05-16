@@ -27,11 +27,8 @@ const Layout = ({ children }: LayoutProps) => {
             <Link to="/flight-tracker" className={`text-sm font-medium ${location.pathname === '/flight-tracker' ? 'text-airblue' : 'hover:text-airblue'}`}>
               Flight Tracker
             </Link>
-            <Link to="/" className="text-sm font-medium hover:text-airblue">
-              My Trips
-            </Link>
-            <Link to="/" className="text-sm font-medium hover:text-airblue">
-              Help
+            <Link to="/team" className={`text-sm font-medium ${location.pathname === '/team' ? 'text-airblue' : 'hover:text-airblue'}`}>
+              Team
             </Link>
           </div>
         </div>
@@ -55,7 +52,7 @@ const Layout = ({ children }: LayoutProps) => {
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Help & Support</h3>
+              <h3 className="font-semibold mb-4">Support</h3>
               <ul className="space-y-2 text-sm">
                 <li className="text-muted-foreground hover:text-foreground">
                   <Link to="/">FAQs</Link>
