@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useRef } from "react";
 import Layout from "@/components/Layout";
 import { Plane, Filter, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,20 +48,31 @@ const FlightTracker: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [dataTimestamp, setDataTimestamp] = useState<Date>(new Date());
   const [showStats, setShowStats] = useState<boolean>(true);
+  const [iframeLoaded, setIframeLoaded] = useState<boolean>(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Redirect to FlightRadar24 when component mounts
+  // Load the FlightRadar24 website in an iframe when component mounts
   useEffect(() => {
-    // Open FlightRadar24 in a new tab without showing the URL
-    const openFlightRadar = () => {
-      const flightRadarUrl = "https://www.flightradar24.com/14.90,78.33/5";
-      window.open(flightRadarUrl, "_blank", "noopener,noreferrer");
-    };
-    
-    // Execute after a short delay to ensure the component is mounted
-    const timer = setTimeout(openFlightRadar, 100);
-    
-    return () => clearTimeout(timer);
+    loadFlightRadarInIframe();
   }, []);
+  
+  // Function to load FlightRadar24 in the iframe
+  const loadFlightRadarInIframe = (flightId?: string) => {
+    setIframeLoaded(false);
+    
+    // Base FlightRadar24 URL focused on India (or selected flight if available)
+    let flightRadarUrl = "https://www.flightradar24.com/14.90,78.33/5";
+    
+    // If a specific flight is selected, modify URL to focus on that flight
+    if (flightId) {
+      flightRadarUrl = `https://www.flightradar24.com/${flightId}`;
+    }
+    
+    // Set the iframe src
+    if (iframeRef.current) {
+      iframeRef.current.src = flightRadarUrl;
+    }
+  };
 
   // Mock function to fetch flights - in a real app, this would call the OpenSky API
   const fetchFlights = async () => {
@@ -170,9 +182,15 @@ const FlightTracker: React.FC = () => {
   // Get unique countries for the filter
   const countries = [...new Set(flights.map(flight => flight.origin_country))].sort();
 
-  // Change this function to explicitly match the expected type in FlightTrackerMap
+  // Handle flight selection
   const handleSelectFlight = (flight: Flight) => {
     setSelectedFlight(flight);
+    
+    // Create a flight ID for FlightRadar24 URL (use callsign or icao24)
+    const flightId = flight.callsign?.trim() || flight.icao24;
+    
+    // Load FlightRadar24 focused on the selected flight
+    loadFlightRadarInIframe(flightId);
   };
 
   return (
@@ -256,7 +274,7 @@ const FlightTracker: React.FC = () => {
                             ? "bg-airblue-light border-airblue" 
                             : "hover:bg-gray-50"
                           }`}
-                          onClick={() => setSelectedFlight(flight)}
+                          onClick={() => handleSelectFlight(flight)}
                         >
                           <div className="font-medium">{flight.callsign}</div>
                           <div className="text-sm text-gray-600">{flight.airline || "Unknown Airline"}</div>
@@ -323,35 +341,40 @@ const FlightTracker: React.FC = () => {
                   >
                     Toggle Stats
                   </Button>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => loadFlightRadarInIframe()}
+                    disabled={!iframeLoaded}
+                  >
+                    Reset Map
+                  </Button>
                 </div>
               </div>
               
               <div className="relative h-[70vh]">
-                {loading && flights.length === 0 && (
+                {/* Loading state */}
+                {(loading && flights.length === 0) || (!iframeLoaded) ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="flex flex-col items-center">
                       <RefreshCw className="h-8 w-8 animate-spin text-airblue mb-4" />
-                      <p className="text-lg text-gray-600">Loading flights...</p>
+                      <p className="text-lg text-gray-600">
+                        {!iframeLoaded ? "Loading flight tracker..." : "Loading flights..."}
+                      </p>
                     </div>
                   </div>
-                )}
+                ) : null}
                 
-                {!loading && flights.length > 0 && (
-                  <div className="h-full w-full flex items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-lg mb-4">For live flight tracking, we connect you to FlightRadar24.</p>
-                      <Button
-                        className="bg-airblue"
-                        onClick={() => {
-                          window.open("https://www.flightradar24.com/14.90,78.33/5", "_blank", "noopener,noreferrer");
-                        }}
-                      >
-                        <Plane className="h-5 w-5 mr-2" />
-                        Open Flight Tracker
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                {/* Embedded FlightRadar24 */}
+                <iframe 
+                  ref={iframeRef}
+                  className="w-full h-full border-none"
+                  title="FlightRadar24 Live Tracker"
+                  src="https://www.flightradar24.com/14.90,78.33/5"
+                  onLoad={() => setIframeLoaded(true)}
+                  style={{ opacity: iframeLoaded ? 1 : 0 }}
+                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                />
               </div>
             </div>
           </div>
@@ -413,7 +436,8 @@ const FlightTracker: React.FC = () => {
           {/* Disclaimer */}
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-500">
-              This is a demonstration using simulated flight data. For real flight tracking, we connect you to FlightRadar24.
+              Flight information provided is simulated for demonstration purposes. 
+              Live tracking data is provided by FlightRadar24.
             </p>
           </div>
         </div>
