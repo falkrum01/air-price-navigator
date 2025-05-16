@@ -1,7 +1,6 @@
-
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { Plane, Filter, RefreshCw, Search } from "lucide-react";
+import { Plane, Filter, RefreshCw, Search, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,40 +47,11 @@ const FlightTracker: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [dataTimestamp, setDataTimestamp] = useState<Date>(new Date());
   const [showStats, setShowStats] = useState<boolean>(true);
-  const [iframeLoaded, setIframeLoaded] = useState<boolean>(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Load the FlightRadar24 website in an iframe when component mounts
-  useEffect(() => {
-    loadFlightRadarInIframe();
-  }, []);
-  
-  // Function to load FlightRadar24 in the iframe
-  const loadFlightRadarInIframe = (flightId?: string) => {
-    setIframeLoaded(false);
-    
-    // Base FlightRadar24 URL focused on India (or selected flight if available)
-    let flightRadarUrl = "https://www.flightradar24.com/14.90,78.33/5";
-    
-    // If a specific flight is selected, modify URL to focus on that flight
-    if (flightId) {
-      flightRadarUrl = `https://www.flightradar24.com/${flightId}`;
-    }
-    
-    // Set the iframe src
-    if (iframeRef.current) {
-      iframeRef.current.src = flightRadarUrl;
-    }
-  };
-
-  // Mock function to fetch flights - in a real app, this would call the OpenSky API
+  // Mock function to fetch flights
   const fetchFlights = async () => {
     setLoading(true);
     try {
-      // In production, this would call the API:
-      // const response = await fetch("https://opensky-network.org/api/states/all");
-      // const data = await response.json();
-      
       // For demo purposes, generate mock flights
       const mockFlights = generateMockFlights();
       setFlights(mockFlights);
@@ -189,8 +159,13 @@ const FlightTracker: React.FC = () => {
     // Create a flight ID for FlightRadar24 URL (use callsign or icao24)
     const flightId = flight.callsign?.trim() || flight.icao24;
     
-    // Load FlightRadar24 focused on the selected flight
-    loadFlightRadarInIframe(flightId);
+    // Open FlightRadar24 in a new tab
+    window.open(`https://www.flightradar24.com/${flightId}`, '_blank');
+  };
+
+  // Open general FlightRadar24 website
+  const openFlightRadar = () => {
+    window.open("https://www.flightradar24.com/14.90,78.33/5", '_blank');
   };
 
   return (
@@ -342,39 +317,37 @@ const FlightTracker: React.FC = () => {
                     Toggle Stats
                   </Button>
                   <Button 
-                    variant="outline"
+                    variant="default"
                     size="sm"
-                    onClick={() => loadFlightRadarInIframe()}
-                    disabled={!iframeLoaded}
+                    onClick={openFlightRadar}
                   >
-                    Reset Map
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Flight Tracker
                   </Button>
                 </div>
               </div>
               
-              <div className="relative h-[70vh]">
-                {/* Loading state */}
-                {(loading && flights.length === 0) || (!iframeLoaded) ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="flex flex-col items-center">
-                      <RefreshCw className="h-8 w-8 animate-spin text-airblue mb-4" />
-                      <p className="text-lg text-gray-600">
-                        {!iframeLoaded ? "Loading flight tracker..." : "Loading flights..."}
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
-                
-                {/* Embedded FlightRadar24 */}
-                <iframe 
-                  ref={iframeRef}
-                  className="w-full h-full border-none"
-                  title="FlightRadar24 Live Tracker"
-                  src="https://www.flightradar24.com/14.90,78.33/5"
-                  onLoad={() => setIframeLoaded(true)}
-                  style={{ opacity: iframeLoaded ? 1 : 0 }}
-                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                />
+              <div className="relative h-[70vh] flex items-center justify-center bg-gray-50">
+                <div className="text-center p-8">
+                  <Plane className="mx-auto h-16 w-16 text-airblue mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Live Flight Tracking</h3>
+                  <p className="mb-6 text-gray-600">
+                    Click on a flight from the list to view its live tracking information,
+                    or open the full Flight Radar tracker to explore all flights.
+                  </p>
+                  
+                  <Button 
+                    className="mx-auto"
+                    onClick={openFlightRadar}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Flight Radar
+                  </Button>
+                  
+                  <p className="mt-6 text-sm text-gray-500">
+                    Flight tracking provided by FlightRadar24
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -385,9 +358,22 @@ const FlightTracker: React.FC = () => {
               <CardContent className="p-4">
                 <div className="flex justify-between">
                   <h3 className="text-xl font-semibold">Flight Details: {selectedFlight.callsign}</h3>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedFlight(null)}>
-                    Close
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const flightId = selectedFlight.callsign?.trim() || selectedFlight.icao24;
+                        window.open(`https://www.flightradar24.com/${flightId}`, '_blank');
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Track This Flight
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedFlight(null)}>
+                      Close
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                   <div>
