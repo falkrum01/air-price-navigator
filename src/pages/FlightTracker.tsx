@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Plane, Filter, RefreshCw, Search } from "lucide-react";
@@ -44,7 +43,7 @@ const FlightTracker: React.FC = () => {
   const [filteredFlights, setFilteredFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
-  const [countryFilter, setCountryFilter] = useState<string>("");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [dataTimestamp, setDataTimestamp] = useState<Date>(new Date());
   const [showStats, setShowStats] = useState<boolean>(true);
@@ -150,7 +149,7 @@ const FlightTracker: React.FC = () => {
       );
     }
     
-    if (countryFilter) {
+    if (countryFilter && countryFilter !== "all") {
       filtered = filtered.filter(flight => flight.origin_country === countryFilter);
     }
     
@@ -227,7 +226,7 @@ const FlightTracker: React.FC = () => {
                         <SelectValue placeholder="All Countries" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Countries</SelectItem>
+                        <SelectItem value="all">All Countries</SelectItem>
                         {countries.map(country => (
                           <SelectItem key={country} value={country}>
                             {country}
