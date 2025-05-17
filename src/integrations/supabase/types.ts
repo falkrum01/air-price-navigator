@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          airline: string
+          booking_status: string
+          created_at: string
+          departure_date: string
+          destination: string
+          flight_number: string
+          id: string
+          origin: string
+          payment_method: string
+          price: number
+          return_date: string | null
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          airline: string
+          booking_status?: string
+          created_at?: string
+          departure_date: string
+          destination: string
+          flight_number: string
+          id?: string
+          origin: string
+          payment_method: string
+          price: number
+          return_date?: string | null
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          airline?: string
+          booking_status?: string
+          created_at?: string
+          departure_date?: string
+          destination?: string
+          flight_number?: string
+          id?: string
+          origin?: string
+          payment_method?: string
+          price?: number
+          return_date?: string | null
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       flight_data: {
         Row: {
           airline: string
@@ -84,6 +132,30 @@ export type Database = {
           lowest_price?: number
           origin?: string
           recommendation?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
         }
         Relationships: []
       }
