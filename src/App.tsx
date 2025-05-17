@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import FlightTracker from "./pages/FlightTracker";
@@ -22,8 +22,13 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Navigate replace to="/auth" />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/home" element={
+              <PrivateRoute>
+                <Index />
+              </PrivateRoute>
+            } />
             <Route path="/flight-tracker" element={
               <PrivateRoute>
                 <FlightTracker />

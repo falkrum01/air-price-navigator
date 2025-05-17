@@ -3,12 +3,16 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Flight } from "@/types/flight";
 import { ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 interface FlightCardProps {
   flight: Flight;
+  onBook: (flightDetails: any) => void;
 }
 
-const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
+const FlightCard: React.FC<FlightCardProps> = ({ flight, onBook }) => {
   const {
     airline,
     airlineLogo,
@@ -23,6 +27,9 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
     websiteLogo,
   } = flight;
 
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   // Format the price to include INR currency symbol and no decimal places
   const formattedPrice = new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -31,38 +38,33 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
     maximumFractionDigits: 0,
   }).format(price);
 
-  // Handle external website navigation
-  const handleSelect = () => {
-    // Construct a URL based on the website name
-    let bookingUrl = "";
-    switch (website.toLowerCase()) {
-      case "paytm":
-        bookingUrl = `https://tickets.paytm.com/flights/flightSearch/${origin}-${destination}/1/0/0/E`;
-        break;
-      case "goibibo":
-        bookingUrl = `https://www.goibibo.com/flights/air-${origin.toLowerCase()}-${destination.toLowerCase()}/`;
-        break;
-      case "makemytrip":
-        bookingUrl = `https://www.makemytrip.com/flight/search?itinerary=${origin}-${destination}`;
-        break;
-      case "cleartrip":
-        bookingUrl = `https://www.cleartrip.com/flights/results?origin=${origin}&destination=${destination}`;
-        break;
-      case "ixigo":
-        bookingUrl = `https://www.ixigo.com/flights/search/${origin}-${destination}`;
-        break;
-      case "yatra":
-        bookingUrl = `https://www.yatra.com/flights/search/dom/${origin}-${destination}`;
-        break;
-      case "easemytrip":
-        bookingUrl = `https://www.easemytrip.com/flights/${origin.toLowerCase()}-${destination.toLowerCase()}`; 
-        break;
-      default:
-        bookingUrl = `https://www.google.com/search?q=${website}+flights+${origin}+to+${destination}`;
+  // Handle booking button click
+  const handleBook = () => {
+    if (!user) {
+      // If user is not logged in, redirect to auth page
+      toast({
+        title: "Login Required",
+        description: "Please log in or sign up to book flights",
+        variant: "default",
+      });
+      navigate('/auth');
+      return;
     }
     
-    // Open in a new tab
-    window.open(bookingUrl, '_blank');
+    // If user is logged in, proceed with booking
+    onBook({
+      airline,
+      flightNumber: flight.id || `${airline}-${Math.floor(Math.random() * 1000)}`,
+      price,
+      origin,
+      destination,
+      departureDate: new Date().toISOString().split('T')[0], // Using current date as an example
+      departureTime,
+      arrivalTime,
+      duration,
+      passengers: 1, // Default to 1 passenger
+      cabinClass: 'economy', // Default to economy
+    });
   };
 
   return (
@@ -145,9 +147,9 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight }) => {
           <p className="text-2xl font-bold text-airblue mb-2">{formattedPrice}</p>
           <Button 
             className="w-full bg-airorange hover:bg-airorange/90"
-            onClick={handleSelect}
+            onClick={handleBook}
           >
-            Select
+            Book
           </Button>
         </div>
       </div>

@@ -1,316 +1,426 @@
 
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SearchParams } from "@/types/flight";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState, useEffect } from "react";
 import FlightCard from "./FlightCard";
 import AirlineFilter from "./AirlineFilter";
-import { Loader2 } from "lucide-react";
-import BookingButton from "./BookingButton";
 import BookingModal from "./BookingModal";
+import { Flight } from "@/types/flight";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { HelpCircle, FilterX, IndianRupee, Loader2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 interface PriceComparisonProps {
-  searchParams: SearchParams;
-  loading: boolean;
-}
-
-// Mock data for flight prices from different OTAs
-const mockOtaData = [
-  { name: 'MakeMyTrip', price: 6249, image: 'https://seeklogo.com/images/M/MakeMyTrip-logo-25095AA180-seeklogo.com.png' },
-  { name: 'Cleartrip', price: 6299, image: 'https://media.glassdoor.com/sqll/300494/cleartrip-com-squarelogo-1583902147100.png' },
-  { name: 'Goibibo', price: 6349, image: 'https://static.goibibo.com/dist/images/favicon-192-192.png' },
-  { name: 'Yatra', price: 6399, image: 'https://play-lh.googleusercontent.com/XbDBXrWJ7Ta5WIWbXEjjcsld5jLutrKw_pYHwoN6jS1BdAAR5nLTUpUIGhY5qh22C7U=w480-h960' },
-  { name: 'EaseMyTrip', price: 6449, image: 'https://play-lh.googleusercontent.com/R1KLExWYrJlN5RRhPXwvMusgW3YCPJ2CanpVlGXUTbJqJBjk3XMgxZd3DBl79XKY_IE=w480-h960' }
-];
-
-interface Flight {
-  id: string;
-  airline: string;
-  class: string;
   origin: string;
   destination: string;
-  departure_date: string;
-  return_date: string | null;
-  price: number;
-  currency: string;
+  departureDate: string;
+  returnDate?: string;
+  passengers: number;
+  cabinClass: string;
 }
 
-const PriceComparison: React.FC<PriceComparisonProps> = ({ searchParams, loading: initialLoading }) => {
+const PriceComparison: React.FC<PriceComparisonProps> = ({
+  origin,
+  destination,
+  departureDate,
+  returnDate,
+  passengers,
+  cabinClass,
+}) => {
+  const [flights, setFlights] = useState<Flight[]>([]);
+  const [filteredFlights, setFilteredFlights] = useState<Flight[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
-  const [priceSort, setPriceSort] = useState<'asc' | 'desc'>('asc');
-  const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
+  const [sortOption, setSortOption] = useState<string>("price-asc");
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  
-  const { data: flights, isLoading, error } = useQuery({
-    queryKey: ['flights', searchParams],
-    queryFn: async () => {
+  const [selectedFlightDetails, setSelectedFlightDetails] = useState<any>(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Fetch flights data
+  useEffect(() => {
+    const fetchFlights = async () => {
       try {
-        let query = supabase
-          .from('flight_data')
-          .select('*')
-          .eq('origin', searchParams.origin)
-          .eq('destination', searchParams.destination)
-          .eq('class', searchParams.cabinClass)
-
-        if (searchParams.departureDate) {
-          query = query.eq('departure_date', searchParams.departureDate)
-        }
-
-        if (searchParams.returnDate) {
-          query = query.eq('return_date', searchParams.returnDate)
-        } else {
-          query = query.is('return_date', null)
-        }
-
-        const { data, error } = await query;
+        setLoading(true);
         
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        // If no data in Supabase, use mock data
-        if (!data || data.length === 0) {
-          return generateMockFlights(searchParams);
-        }
-
-        return data;
-      } catch (error) {
-        console.error('Error fetching flight data:', error);
-        return generateMockFlights(searchParams);
+        // Simulate API call with a timeout
+        setTimeout(() => {
+          // Mock data - in a real app, this would be an API call
+          const mockFlights: Flight[] = [
+            {
+              id: "AI101",
+              airline: "Air India",
+              airlineLogo: "https://seeklogo.com/images/A/air-india-logo-6C288EE1B0-seeklogo.com.png",
+              origin: origin,
+              destination: destination,
+              departureDate: departureDate,
+              departureTime: "06:15",
+              arrivalTime: "08:45",
+              duration: "2h 30m",
+              stops: 0,
+              price: 5200,
+              website: "MakeMyTrip",
+              websiteLogo: "https://imgak.mmtcdn.com/pwa_v3/pwa_commons_assets/desktop/png/MMT-Logo.png",
+            },
+            {
+              id: "SG405",
+              airline: "SpiceJet",
+              airlineLogo: "https://seeklogo.com/images/S/spicejet-logo-768009B71F-seeklogo.com.png",
+              origin: origin,
+              destination: destination,
+              departureDate: departureDate,
+              departureTime: "10:30",
+              arrivalTime: "13:15",
+              duration: "2h 45m",
+              stops: 1,
+              price: 4800,
+              website: "Paytm",
+              websiteLogo: "https://seeklogo.com/images/P/paytm-logo-0124A6D783-seeklogo.com.png",
+            },
+            {
+              id: "UK969",
+              airline: "Vistara",
+              airlineLogo: "https://seeklogo.com/images/V/vistara-logo-91C2A3242D-seeklogo.com.png",
+              origin: origin,
+              destination: destination,
+              departureDate: departureDate,
+              departureTime: "12:45",
+              arrivalTime: "15:00",
+              duration: "2h 15m",
+              stops: 0,
+              price: 6100,
+              website: "Cleartrip",
+              websiteLogo: "https://seeklogo.com/images/C/cleartrip-logo-3A4DD1ED23-seeklogo.com.png",
+            },
+            {
+              id: "6E235",
+              airline: "IndiGo",
+              airlineLogo: "https://seeklogo.com/images/I/indigo-airlines-logo-DBEBF52533-seeklogo.com.png",
+              origin: origin,
+              destination: destination,
+              departureDate: departureDate,
+              departureTime: "16:20",
+              arrivalTime: "18:55",
+              duration: "2h 35m",
+              stops: 0,
+              price: 5500,
+              website: "Goibibo",
+              websiteLogo: "https://seeklogo.com/images/G/goibibo-logo-89AAA42136-seeklogo.com.png",
+            },
+            {
+              id: "G8456",
+              airline: "GoAir",
+              airlineLogo: "https://seeklogo.com/images/G/go-air-logo-4E7AE3C53B-seeklogo.com.png",
+              origin: origin,
+              destination: destination,
+              departureDate: departureDate,
+              departureTime: "19:10",
+              arrivalTime: "21:30",
+              duration: "2h 20m",
+              stops: 0,
+              price: 4500,
+              website: "Ixigo",
+              websiteLogo: "https://seeklogo.com/images/I/ixigo-logo-BCA9C8F774-seeklogo.com.png",
+            },
+          ];
+          
+          setFlights(mockFlights);
+          setFilteredFlights(mockFlights);
+          
+          // Create list of all airlines
+          const airlines = [...new Set(mockFlights.map((flight) => flight.airline))];
+          setSelectedAirlines(airlines);
+          
+          // Find price range
+          const prices = mockFlights.map((flight) => flight.price);
+          const minPrice = Math.min(...prices);
+          const maxPrice = Math.max(...prices);
+          setPriceRange([minPrice, maxPrice]);
+          
+          setLoading(false);
+        }, 1500);
+      } catch (err) {
+        setError("Failed to load flight data. Please try again.");
+        setLoading(false);
+        console.error("Error fetching flights:", err);
       }
-    },
-    enabled: !!searchParams.origin && !!searchParams.destination && !!searchParams.departureDate
-  });
+    };
 
-  // Generate mock flight data
-  const generateMockFlights = (params: SearchParams): Flight[] => {
-    const airlines = ['IndiGo', 'Air India', 'SpiceJet', 'Vistara', 'GoAir', 'AirAsia India'];
-    const basePrice = Math.floor(Math.random() * 3000) + 4000;
-    
-    return airlines.map((airline, index) => ({
-      id: `mock-${index}`,
-      airline,
-      class: params.cabinClass,
-      origin: params.origin,
-      destination: params.destination,
-      departure_date: params.departureDate,
-      return_date: params.returnDate || null,
-      price: basePrice + (index * 200) + (Math.floor(Math.random() * 200)),
-      currency: 'INR'
-    }));
+    if (!user) {
+      // If user is not logged in, redirect to auth
+      toast({
+        title: "Login Required",
+        description: "Please log in to search for flights",
+        variant: "default",
+      });
+      navigate('/auth');
+    } else {
+      fetchFlights();
+    }
+  }, [origin, destination, departureDate, user, navigate]);
+
+  // Apply filters
+  useEffect(() => {
+    if (flights.length === 0) return;
+
+    // Filter by selected airlines and price range
+    const filtered = flights.filter(
+      (flight) =>
+        selectedAirlines.includes(flight.airline) &&
+        flight.price >= priceRange[0] &&
+        flight.price <= priceRange[1]
+    );
+
+    // Sort flights based on the selected sort option
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortOption) {
+        case "price-asc":
+          return a.price - b.price;
+        case "price-desc":
+          return b.price - a.price;
+        case "duration-asc":
+          return a.duration.localeCompare(b.duration);
+        case "departure-asc":
+          return a.departureTime.localeCompare(b.departureTime);
+        case "arrival-asc":
+          return a.arrivalTime.localeCompare(b.arrivalTime);
+        default:
+          return 0;
+      }
+    });
+
+    setFilteredFlights(sorted);
+  }, [flights, selectedAirlines, priceRange, sortOption]);
+
+  const handleSortChange = (value: string) => {
+    setSortOption(value);
   };
 
-  const loading = initialLoading || isLoading;
+  const resetFilters = () => {
+    setSelectedAirlines([...new Set(flights.map((flight) => flight.airline))]);
+    const prices = flights.map((flight) => flight.price);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    setPriceRange([minPrice, maxPrice]);
+    setSortOption("price-asc");
+  };
 
-  const filteredFlights = flights?.filter(flight => 
-    selectedAirlines.length === 0 || selectedAirlines.includes(flight.airline)
-  ) || [];
-
-  const sortedFlights = [...filteredFlights].sort((a, b) => {
-    return priceSort === 'asc' ? a.price - b.price : b.price - a.price;
-  });
-  
-  const availableAirlines = flights?.reduce((acc: string[], flight) => {
-    if (!acc.includes(flight.airline)) {
-      acc.push(flight.airline);
-    }
-    return acc;
-  }, []) || [];
-
-  const handleSelectFlight = (flight: Flight) => {
-    setSelectedFlight(flight);
+  const handleBookingClick = (flightDetails: any) => {
+    // Prepare booking details with additional information
+    const bookingDetails = {
+      ...flightDetails,
+      passengers: parseInt(passengers.toString()),
+      cabinClass,
+      returnDate
+    };
+    
+    setSelectedFlightDetails(bookingDetails);
     setIsBookingModalOpen(true);
   };
 
-  // Mock departure and arrival times
-  const generateMockTimes = () => {
-    const hours = ["06", "08", "10", "13", "15", "18", "20", "22"];
-    const minutes = ["00", "15", "30", "45"];
-    
-    const departureHour = hours[Math.floor(Math.random() * hours.length)];
-    const departureMinute = minutes[Math.floor(Math.random() * minutes.length)];
-    
-    const durationHours = Math.floor(Math.random() * 3) + 1;
-    const durationMinutes = Math.floor(Math.random() * 60);
-    
-    const departureTime = `${departureHour}:${departureMinute}`;
-    
-    // Calculate arrival time
-    let arrivalHour = parseInt(departureHour) + durationHours;
-    let arrivalMinute = parseInt(departureMinute) + durationMinutes;
-    
-    if (arrivalMinute >= 60) {
-      arrivalHour += 1;
-      arrivalMinute -= 60;
-    }
-    
-    if (arrivalHour >= 24) {
-      arrivalHour -= 24;
-    }
-    
-    const arrivalTime = `${String(arrivalHour).padStart(2, '0')}:${String(arrivalMinute).padStart(2, '0')}`;
-    const duration = `${durationHours}h ${durationMinutes}m`;
-    
-    return { departureTime, arrivalTime, duration };
-  };
+  // Extract unique airlines for filtering
+  const uniqueAirlines = [...new Set(flights.map((flight) => flight.airline))];
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 h-[400px]">
+        <Loader2 className="h-12 w-12 animate-spin text-airblue mb-4" />
+        <h3 className="text-xl font-medium">Loading flight options</h3>
+        <p className="text-muted-foreground">Please wait while we find the best deals for you</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 h-[400px]">
+        <p className="text-red-500 mb-4">{error}</p>
+        <Button 
+          onClick={() => window.location.reload()} 
+          variant="outline"
+        >
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Flight Prices</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-airblue" />
-          </div>
-        ) : error ? (
-          <div className="text-center py-8 text-red-500">
-            <p>Error loading flight data. Please try again.</p>
-          </div>
-        ) : flights && flights.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="mb-3 font-medium">Sort By Price</h3>
-                  <RadioGroup 
-                    defaultValue="asc" 
-                    value={priceSort} 
-                    onValueChange={(value) => setPriceSort(value as 'asc' | 'desc')}
-                    className="flex flex-col space-y-1"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="asc" id="price-asc" />
-                      <Label htmlFor="price-asc">Lowest to Highest</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="desc" id="price-desc" />
-                      <Label htmlFor="price-desc">Highest to Lowest</Label>
-                    </div>
-                  </RadioGroup>
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Filters Panel */}
+      <div className="col-span-1">
+        <Card className="sticky top-6">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-lg font-medium">Filters</CardTitle>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0"
+              onClick={resetFilters}
+            >
+              <FilterX className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Airlines filter */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium">Airlines</h3>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                          <HelpCircle className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="w-48">Select the airlines you want to include in the search results.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
 
                 <AirlineFilter 
-                  airlines={availableAirlines}
-                  selectedAirlines={selectedAirlines}
-                  onSelectionChange={setSelectedAirlines}
+                  availableAirlines={uniqueAirlines}
+                  selectedAirlines={selectedAirlines} 
+                  onSelectionChange={setSelectedAirlines} 
                 />
               </div>
-              
-              <div className="space-y-4">
-                <Tabs defaultValue="flights">
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="flights">Flights</TabsTrigger>
-                    <TabsTrigger value="comparison">Price Comparison</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="flights" className="space-y-4">
-                    {sortedFlights.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p>No flights found matching your criteria.</p>
-                      </div>
-                    ) : (
-                      sortedFlights.map((flight) => {
-                        // Generate mock flight details
-                        const flightNumber = `${flight.airline.substring(0, 2).toUpperCase()}${Math.floor(Math.random() * 9000) + 1000}`;
-                        const { departureTime, arrivalTime, duration } = generateMockTimes();
 
-                        return (
-                          <FlightCard
-                            key={flight.id}
-                            airline={flight.airline}
-                            flightNumber={flightNumber}
-                            origin={flight.origin}
-                            destination={flight.destination}
-                            departureTime={departureTime}
-                            arrivalTime={arrivalTime}
-                            duration={duration}
-                            price={flight.price}
-                            action={
-                              <BookingButton 
-                                price={flight.price} 
-                                onClick={() => handleSelectFlight(flight)} 
-                              />
-                            }
-                          />
-                        );
-                      })
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="comparison">
-                    <div className="bg-muted p-4 rounded-lg mb-4">
-                      <h3 className="font-medium mb-2">Compare with Online Travel Agencies</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        See how our prices compare with major Indian OTAs for the best deal
-                      </p>
-                      
-                      {sortedFlights.length > 0 && (
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="flex items-center gap-2">
-                              <div className="bg-airblue rounded-full w-6 h-6 flex items-center justify-center text-white text-xs font-bold">
-                                1
-                              </div>
-                              <span className="font-medium">SkyPredict</span>
-                            </div>
-                            <div className="text-right font-bold">
-                              ₹{sortedFlights[0].price.toLocaleString('en-IN')}
-                            </div>
-                          </div>
-                          
-                          {mockOtaData.map((ota, index) => (
-                            <div key={ota.name} className="grid grid-cols-2 gap-2">
-                              <div className="flex items-center gap-2">
-                                <div className="bg-gray-200 rounded-full w-6 h-6 flex items-center justify-center text-gray-700 text-xs font-bold">
-                                  {index + 2}
-                                </div>
-                                <span>{ota.name}</span>
-                              </div>
-                              <div className="text-right">
-                                ₹{ota.price.toLocaleString('en-IN')}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+              {/* Price range filter */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-medium">Price Range</h3>
+                  <span className="text-sm text-muted-foreground">
+                    ₹{priceRange[0].toLocaleString('en-IN')} - ₹{priceRange[1].toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <Slider
+                  min={Math.min(...flights.map((f) => f.price))}
+                  max={Math.max(...flights.map((f) => f.price))}
+                  step={100}
+                  value={[priceRange[0], priceRange[1]]}
+                  onValueChange={(value) => setPriceRange([value[0], value[1]])}
+                  className="mb-6"
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="min-price" className="text-xs text-muted-foreground mb-1 block">
+                      Min Price
+                    </label>
+                    <div className="relative">
+                      <IndianRupee className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        id="min-price"
+                        type="number"
+                        className="pl-8"
+                        value={priceRange[0]}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (!isNaN(value) && value >= 0 && value <= priceRange[1]) {
+                            setPriceRange([value, priceRange[1]]);
+                          }
+                        }}
+                      />
                     </div>
-                  </TabsContent>
-                </Tabs>
+                  </div>
+                  <div>
+                    <label htmlFor="max-price" className="text-xs text-muted-foreground mb-1 block">
+                      Max Price
+                    </label>
+                    <div className="relative">
+                      <IndianRupee className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        id="max-price"
+                        type="number"
+                        className="pl-8"
+                        value={priceRange[1]}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (!isNaN(value) && value >= priceRange[0]) {
+                            setPriceRange([priceRange[0], value]);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sort options */}
+              <div>
+                <label htmlFor="sort-option" className="text-sm font-medium block mb-2">
+                  Sort By
+                </label>
+                <Select 
+                  value={sortOption} 
+                  onValueChange={handleSortChange}
+                >
+                  <SelectTrigger id="sort-option">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                    <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                    <SelectItem value="duration-asc">Duration: Shortest</SelectItem>
+                    <SelectItem value="departure-asc">Departure: Earliest</SelectItem>
+                    <SelectItem value="arrival-asc">Arrival: Earliest</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          </>
-        ) : (
-          <div className="text-center py-8">
-            <p>No flight data available. Please search for flights.</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Results Panel */}
+      <div className="col-span-1 md:col-span-3">
+        <div className="flex flex-col space-y-2">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-medium">
+              {filteredFlights.length} {filteredFlights.length === 1 ? 'flight' : 'flights'} found
+            </h2>
           </div>
-        )}
-      </CardContent>
-      
-      {selectedFlight && (
+
+          {filteredFlights.length > 0 ? (
+            filteredFlights.map((flight) => (
+              <FlightCard 
+                key={flight.id} 
+                flight={flight}
+                onBook={handleBookingClick}
+              />
+            ))
+          ) : (
+            <div className="text-center py-12 bg-muted rounded-lg">
+              <h3 className="text-lg font-medium">No flights match your filters</h3>
+              <p className="text-muted-foreground mt-2">Try adjusting your filters to see more results</p>
+              <Button onClick={resetFilters} variant="outline" className="mt-4">
+                Reset Filters
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Booking Modal */}
+      {selectedFlightDetails && (
         <BookingModal 
           isOpen={isBookingModalOpen} 
           onClose={() => setIsBookingModalOpen(false)} 
-          flightDetails={{
-            airline: selectedFlight.airline,
-            flightNumber: `${selectedFlight.airline.substring(0, 2).toUpperCase()}${Math.floor(Math.random() * 9000) + 1000}`,
-            price: selectedFlight.price,
-            origin: selectedFlight.origin,
-            destination: selectedFlight.destination,
-            departureDate: selectedFlight.departure_date,
-            returnDate: selectedFlight.return_date || undefined,
-            passengers: searchParams.passengers,
-            cabinClass: selectedFlight.class,
-            ...generateMockTimes()
-          }}
+          flightDetails={selectedFlightDetails}
         />
       )}
-    </Card>
+    </div>
   );
 };
 

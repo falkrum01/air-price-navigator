@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,9 @@ interface PaymentFormProps {
     returnDate?: string;
     passengers: number;
     cabinClass: string;
+    departureTime?: string;
+    arrivalTime?: string;
+    duration?: string;
   };
   onCancel: () => void;
 }
@@ -69,18 +73,22 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
         price: finalAmount,
         payment_method: paymentMethod,
         transaction_id: transactionId,
+        booking_status: 'confirmed'
       });
       
       if (error) throw error;
       
       toast({
         title: "Payment Successful",
-        description: "Your flight has been booked successfully!",
+        description: "Your flight has been booked successfully! Check your email for details.",
         variant: "default",
       });
       
       // Generate PDF ticket
       generatePDF(transactionId);
+      
+      // Simulate sending email
+      sendConfirmationEmail(transactionId);
       
       // Redirect after a delay
       setTimeout(() => {
@@ -183,7 +191,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
     doc.text("Passenger Information", 20, 70);
     
     doc.setFontSize(11);
-    doc.text(`Passenger Name: ${user?.user_metadata.full_name || "Passenger"}`, 20, 80);
+    doc.text(`Passenger Name: ${user?.user_metadata?.full_name || "Passenger"}`, 20, 80);
     doc.text(`Number of Passengers: ${flightDetails.passengers}`, 20, 87);
     
     // Flight details table
@@ -222,7 +230,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
     });
     
     // Payment information
-    const yPos = (doc as any).lastAutoTable.finalY + 15;
+    const yPos = doc.lastAutoTable.finalY + 15;
     
     doc.setFontSize(14);
     doc.text("Payment Information", 20, yPos);
@@ -241,6 +249,19 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
     
     // Save the PDF
     doc.save(`SkyPredict_Ticket_${transactionId}.pdf`);
+  };
+
+  const sendConfirmationEmail = (transactionId: string) => {
+    // In a real application, this would call an API endpoint to send an email
+    // Here we're just simulating this with a toast message
+    console.log("Sending confirmation email for booking:", transactionId);
+    
+    setTimeout(() => {
+      toast({
+        title: "Email Sent",
+        description: `A booking confirmation has been sent to ${user?.email}`,
+      });
+    }, 1000);
   };
 
   const formatCardNumber = (value: string) => {
