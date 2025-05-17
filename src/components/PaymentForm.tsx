@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { Plane, Calendar, MapPin, CreditCard, IndianRupee, Banknote, Wallet, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import "jspdf-autotable";
-import { SearchParams } from "@/types/flight";
 
 interface PaymentFormProps {
   flightDetails: {
@@ -413,7 +411,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
                         id="cardCvv"
                         placeholder="123"
                         value={cardCvv}
-                        onChange={(e) => setCvv(e.target.value)}
+                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 3))}
                         maxLength={3}
                         required
                         type="password"
@@ -478,14 +476,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
       </CardContent>
     </Card>
   );
-};
-
-// Helper function to format CVV input
-const setCvv = (setCvvState: React.Dispatch<React.SetStateAction<string>>) => (e: React.ChangeEvent<HTMLInputElement>) => {
-  const value = e.target.value.replace(/\D/g, '');
-  if (value.length <= 3) {
-    setCvvState(value);
-  }
 };
 
 export default PaymentForm;
