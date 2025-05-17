@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface AuthContextProps {
   session: Session | null;
@@ -23,42 +23,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    // Set up auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setLoading(false);
-        
-        if (event === 'SIGNED_IN') {
-          toast({
-            title: "Success",
-            description: "You have been signed in successfully",
-          });
-          // After sign-in, redirect to /home
-          window.location.href = '/home';
-        } else if (event === 'SIGNED_OUT') {
-          toast({
-            title: "Signed out",
-            description: "You have been signed out",
-          });
-        }
-      }
-    );
-
-    // Then check for existing session
+    // First get the initial session to prevent a flash of unauthenticated content
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setLoading(false);
     });
+    
+    // Then set up the subscription
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        // Only update if the session state actually changed to avoid unnecessary rerenders
+        if (
+          (currentSession && !session) || 
+          (!currentSession && session) || 
+          (currentSession?.user?.id !== session?.user?.id)
+        ) {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          if (event === 'SIGNED_IN') {
+            // Only show toast and redirect if this is actually a new sign-in
+            toast({
+              title: "Success",
+              description: "You have been signed in successfully",
+            });
+            
+            // Use setTimeout to ensure state updates have been processed
+            setTimeout(() => {
+              navigate('/home');
+            }, 0);
+          } else if (event === 'SIGNED_OUT') {
+            toast({
+              title: "Signed out",
+              description: "You have been signed out",
+            });
+            
+            // Redirect to auth page on sign-out
+            navigate('/auth');
+          }
+        }
+      }
+    );
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate, toast]);
+
+  // Redirect to /home if user is already logged in and tries to access /auth
+  useEffect(() => {
+    if (user && !loading && location.pathname === '/auth') {
+      navigate('/home');
+    }
+  }, [user, loading, location.pathname, navigate]);
 
   const signIn = async (email: string, password: string) => {
     try {

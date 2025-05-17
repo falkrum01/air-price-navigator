@@ -5,7 +5,7 @@ export interface Flight {
   airlineLogo: string;
   origin: string;
   destination: string;
-  departureDate: string; // Added this field
+  departureDate: string;
   departureTime: string;
   arrivalTime: string;
   duration: string;
@@ -13,6 +13,9 @@ export interface Flight {
   price: number;
   website: string;
   websiteLogo: string;
+  flightNumber?: string; // Making this optional as it may not be available in all cases
+  cabinClass?: string;
+  passengers?: number;
 }
 
 export interface SearchParams {
