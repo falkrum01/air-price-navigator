@@ -34,7 +34,11 @@ const App = () => (
                 <FlightTracker />
               </PrivateRoute>
             } />
-            <Route path="/team" element={<Team />} />
+            <Route path="/team" element={
+              <PrivateRoute>
+                <Team />
+              </PrivateRoute>
+            } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

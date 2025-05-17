@@ -5,6 +5,7 @@ export interface Flight {
   airlineLogo: string;
   origin: string;
   destination: string;
+  departureDate: string; // Added this field
   departureTime: string;
   arrivalTime: string;
   duration: string;
@@ -14,28 +15,11 @@ export interface Flight {
   websiteLogo: string;
 }
 
-export interface PricePrediction {
-  date: string;
-  lowestPrice: number;
-  highestPrice: number;
-  averagePrice: number;
-  recommendation: 'buy' | 'wait' | 'neutral';
-  confidence: number;
-}
-
 export interface SearchParams {
   origin: string;
   destination: string;
   departureDate: string;
   returnDate?: string;
   passengers: number;
-  cabinClass: 'economy' | 'business' | 'first';
-  currency?: string;
-}
-
-export interface FilterParams {
-  airlines: string[];
-  maxPrice?: number;
-  maxStops?: number;
-  websites?: string[];
+  cabinClass: string;
 }

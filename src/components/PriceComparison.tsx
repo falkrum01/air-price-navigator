@@ -15,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
-interface PriceComparisonProps {
+export interface PriceComparisonProps {
   origin: string;
   destination: string;
   departureDate: string;
@@ -289,7 +289,7 @@ const PriceComparison: React.FC<PriceComparisonProps> = ({
                 </div>
 
                 <AirlineFilter 
-                  availableAirlines={uniqueAirlines}
+                  airlines={uniqueAirlines}
                   selectedAirlines={selectedAirlines} 
                   onSelectionChange={setSelectedAirlines} 
                 />

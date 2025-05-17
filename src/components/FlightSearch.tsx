@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import SearchForm from "./SearchForm";
 import PriceComparison from "./PriceComparison";
-import PricePrediction from "./PricePrediction";
 import { SearchParams } from "@/types/flight";
 import { toast } from "@/hooks/use-toast";
 
@@ -34,7 +33,7 @@ const FlightSearch: React.FC = () => {
       description: `Finding flights from ${params.origin} to ${params.destination}`
     });
 
-    // The loading state will be handled by the child components
+    // The loading state will be handled by the child component
   };
 
   return (
@@ -48,11 +47,14 @@ const FlightSearch: React.FC = () => {
           <div className="col-span-1 flex justify-center">
             <div className="w-full">
               <div className="mt-6 w-full">
-                {/* Show both components in sequence without tabs */}
-                <div className="space-y-8">
-                  <PriceComparison searchParams={searchParams} loading={loading} />
-                  <PricePrediction searchParams={searchParams} loading={loading} />
-                </div>
+                <PriceComparison 
+                  origin={searchParams.origin}
+                  destination={searchParams.destination}
+                  departureDate={searchParams.departureDate}
+                  returnDate={searchParams.returnDate}
+                  passengers={searchParams.passengers}
+                  cabinClass={searchParams.cabinClass}
+                />
               </div>
             </div>
           </div>

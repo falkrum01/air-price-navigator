@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextProps {
   session: Session | null;
@@ -36,6 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             title: "Success",
             description: "You have been signed in successfully",
           });
+          // After sign-in, redirect to /home
+          window.location.href = '/home';
         } else if (event === 'SIGNED_OUT') {
           toast({
             title: "Signed out",
