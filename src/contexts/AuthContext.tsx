@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -26,46 +26,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Handle authentication state changes
   useEffect(() => {
-    // First get the initial session to prevent a flash of unauthenticated content
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setLoading(false);
-    });
+    // First get the initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+      } catch (error) {
+        console.error("Error getting initial session:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    // Then set up the subscription
+    getInitialSession();
+    
+    // Set up the auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        // Only update if the session state actually changed to avoid unnecessary rerenders
-        if (
-          (currentSession && !session) || 
-          (!currentSession && session) || 
-          (currentSession?.user?.id !== session?.user?.id)
-        ) {
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          
-          if (event === 'SIGNED_IN') {
-            // Only show toast and redirect if this is actually a new sign-in
-            toast({
-              title: "Success",
-              description: "You have been signed in successfully",
-            });
-            
-            // Use setTimeout to ensure state updates have been processed
-            setTimeout(() => {
-              navigate('/home');
-            }, 0);
-          } else if (event === 'SIGNED_OUT') {
-            toast({
-              title: "Signed out",
-              description: "You have been signed out",
-            });
-            
-            // Redirect to auth page on sign-out
-            navigate('/auth');
-          }
+        console.log("Auth state changed:", event, currentSession?.user?.id);
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        if (event === 'SIGNED_IN') {
+          toast({
+            title: "Success",
+            description: "You have been signed in successfully",
+          });
+        } else if (event === 'SIGNED_OUT') {
+          toast({
+            title: "Signed out",
+            description: "You have been signed out",
+          });
         }
       }
     );
@@ -73,12 +68,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate, toast]);
+  }, [toast]);
 
-  // Redirect to /home if user is already logged in and tries to access /auth
+  // Navigation effect separate from the auth state listener
   useEffect(() => {
-    if (user && !loading && location.pathname === '/auth') {
-      navigate('/home');
+    if (!loading) {
+      if (user && location.pathname === '/auth') {
+        navigate('/home');
+      } else if (!user && location.pathname !== '/auth' && !location.pathname.includes('password-reset')) {
+        navigate('/auth');
+      }
     }
   }, [user, loading, location.pathname, navigate]);
 

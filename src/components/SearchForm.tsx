@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import { Calendar } from "lucide-react";
-import { DateRange } from "react-day-picker";
 
+import React, { useState } from "react";
+import { Calendar as CalendarIcon } from "lucide-react"; // Fix import to use lucide-react instead
+import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "@/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchParams } from "@/types/flight";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { indianAirports } from "@/data/indianAirports";
 
 interface SearchFormProps {
   onSearch: (params: SearchParams) => void;
@@ -31,6 +33,8 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
     from: undefined,
     to: undefined,
   });
+  const [originOpen, setOriginOpen] = useState(false);
+  const [destinationOpen, setDestinationOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,27 +80,75 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       {/* Origin */}
       <div>
         <Label htmlFor="origin">Origin</Label>
-        <Input
-          type="text"
-          id="origin"
-          placeholder="Enter origin airport"
-          value={origin}
-          onChange={(e) => setOrigin(e.target.value)}
-          required
-        />
+        <Popover open={originOpen} onOpenChange={setOriginOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={originOpen}
+              className="w-full justify-between"
+            >
+              {origin ? indianAirports.find((airport) => airport.iata_code === origin)?.name : "Select origin airport"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0">
+            <Command>
+              <CommandInput placeholder="Search airports..." className="h-9" />
+              <CommandEmpty>No airport found.</CommandEmpty>
+              <CommandGroup className="max-h-[300px] overflow-auto">
+                {indianAirports.map((airport) => (
+                  <CommandItem
+                    key={airport.iata_code}
+                    value={airport.iata_code}
+                    onSelect={(value) => {
+                      setOrigin(value);
+                      setOriginOpen(false);
+                    }}
+                  >
+                    {airport.name} ({airport.iata_code}) - {airport.city}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Destination */}
       <div>
         <Label htmlFor="destination">Destination</Label>
-        <Input
-          type="text"
-          id="destination"
-          placeholder="Enter destination airport"
-          value={destination}
-          onChange={(e) => setDestination(e.target.value)}
-          required
-        />
+        <Popover open={destinationOpen} onOpenChange={setDestinationOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={destinationOpen}
+              className="w-full justify-between"
+            >
+              {destination ? indianAirports.find((airport) => airport.iata_code === destination)?.name : "Select destination airport"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0">
+            <Command>
+              <CommandInput placeholder="Search airports..." className="h-9" />
+              <CommandEmpty>No airport found.</CommandEmpty>
+              <CommandGroup className="max-h-[300px] overflow-auto">
+                {indianAirports.map((airport) => (
+                  <CommandItem
+                    key={airport.iata_code}
+                    value={airport.iata_code}
+                    onSelect={(value) => {
+                      setDestination(value);
+                      setDestinationOpen(false);
+                    }}
+                  >
+                    {airport.name} ({airport.iata_code}) - {airport.city}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Date Selection */}
@@ -107,7 +159,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
             <Button
               variant={"outline"}
               className={cn(
-                "w-[280px] justify-start text-left font-normal",
+                "w-full justify-start text-left font-normal",
                 !date?.from && "text-muted-foreground"
               )}
             >
@@ -153,7 +205,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       <div>
         <Label htmlFor="passengers">Passengers</Label>
         <Select value={passengers} onValueChange={setPassengers}>
-          <SelectTrigger className="w-[280px]">
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select number of passengers" />
           </SelectTrigger>
           <SelectContent>
@@ -170,7 +222,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       <div>
         <Label htmlFor="cabinClass">Cabin Class</Label>
         <Select value={cabinClass} onValueChange={setCabinClass}>
-          <SelectTrigger className="w-[280px]">
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select cabin class" />
           </SelectTrigger>
           <SelectContent>
