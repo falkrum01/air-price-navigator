@@ -30,6 +30,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <Routes>
+            {/* Redirect from root to auth if not logged in, otherwise to home */}
             <Route path="/" element={<Navigate replace to="/auth" />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/home" element={
