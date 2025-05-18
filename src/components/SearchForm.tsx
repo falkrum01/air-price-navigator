@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Calendar } from "lucide-react"; // Import CalendarIcon from lucide-react instead
+import { Calendar } from "lucide-react"; // Import Calendar from lucide-react
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -87,10 +87,12 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
               aria-expanded={originOpen}
               className="w-full justify-between"
             >
-              {origin ? indianAirports.find((airport) => airport.iata_code === origin)?.name : "Select origin airport"}
+              {origin 
+                ? indianAirports.find((airport) => airport.iata_code === origin)?.city || "Select origin"
+                : "Select origin"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[300px] p-0">
+          <PopoverContent className="w-[300px] p-0" align="start">
             <Command>
               <CommandInput placeholder="Search airports..." className="h-9" />
               <CommandEmpty>No airport found.</CommandEmpty>
@@ -98,13 +100,16 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
                 {indianAirports.map((airport) => (
                   <CommandItem
                     key={airport.iata_code}
-                    value={airport.iata_code}
-                    onSelect={(value) => {
-                      setOrigin(value);
+                    value={airport.iata_code + " " + airport.name + " " + airport.city}
+                    onSelect={() => {
+                      setOrigin(airport.iata_code);
                       setOriginOpen(false);
                     }}
                   >
-                    {airport.name} ({airport.iata_code}) - {airport.city}
+                    <span>{airport.city}</span>
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      {airport.name} ({airport.iata_code})
+                    </span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -124,10 +129,12 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
               aria-expanded={destinationOpen}
               className="w-full justify-between"
             >
-              {destination ? indianAirports.find((airport) => airport.iata_code === destination)?.name : "Select destination airport"}
+              {destination 
+                ? indianAirports.find((airport) => airport.iata_code === destination)?.city || "Select destination"
+                : "Select destination"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[300px] p-0">
+          <PopoverContent className="w-[300px] p-0" align="start">
             <Command>
               <CommandInput placeholder="Search airports..." className="h-9" />
               <CommandEmpty>No airport found.</CommandEmpty>
@@ -135,13 +142,16 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
                 {indianAirports.map((airport) => (
                   <CommandItem
                     key={airport.iata_code}
-                    value={airport.iata_code}
-                    onSelect={(value) => {
-                      setDestination(value);
+                    value={airport.iata_code + " " + airport.name + " " + airport.city}
+                    onSelect={() => {
+                      setDestination(airport.iata_code);
                       setDestinationOpen(false);
                     }}
                   >
-                    {airport.name} ({airport.iata_code}) - {airport.city}
+                    <span>{airport.city}</span>
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      {airport.name} ({airport.iata_code})
+                    </span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -163,11 +173,11 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
               )}
             >
               <Calendar className="mr-2 h-4 w-4" />
-              {date?.from ? (
-                date.to ? (
-                  `${date.from?.toLocaleDateString()} - ${date.to?.toLocaleDateString()}`
+              {departureDate ? (
+                tripType === "round" && returnDate ? (
+                  `${departureDate.toLocaleDateString()} - ${returnDate.toLocaleDateString()}`
                 ) : (
-                  date.from?.toLocaleDateString()
+                  departureDate.toLocaleDateString()
                 )
               ) : (
                 <span>Pick a date</span>

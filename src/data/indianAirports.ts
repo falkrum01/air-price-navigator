@@ -1,7 +1,7 @@
 
 export interface Airport {
   code: string;
-  iata_code: string; // Adding iata_code as a property
+  iata_code: string;
   name: string;
   city: string;
 }
