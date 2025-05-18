@@ -1,10 +1,9 @@
 
 import React, { useState } from "react";
-import { Calendar as CalendarIcon } from "lucide-react"; // Fix import to use lucide-react instead
+import { Calendar } from "lucide-react"; // Import CalendarIcon from lucide-react instead
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -44,12 +43,12 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       return;
     }
 
-    // Create search params object without the currency property
-    const searchParams = {
+    // Create search params object with proper date conversions
+    const searchParams: SearchParams = {
       origin,
       destination,
-      departureDate,
-      returnDate: tripType === "round" ? returnDate?.toISOString().split('T')[0] : undefined,
+      departureDate: departureDate.toISOString().split('T')[0], // Convert Date to string
+      returnDate: tripType === "round" && returnDate ? returnDate.toISOString().split('T')[0] : undefined,
       passengers: parseInt(passengers),
       cabinClass
     };
@@ -163,7 +162,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
                 !date?.from && "text-muted-foreground"
               )}
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
+              <Calendar className="mr-2 h-4 w-4" />
               {date?.from ? (
                 date.to ? (
                   `${date.from?.toLocaleDateString()} - ${date.to?.toLocaleDateString()}`
