@@ -22,35 +22,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // First, handle auth state changes separately from navigation
   useEffect(() => {
-    // Initialize auth state
-    const initializeAuth = async () => {
-      setLoading(true);
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-      } finally {
-        setLoading(false);
-        setAuthChecked(true);
-      }
-    };
+    // First get the initial session to prevent a flash of unauthenticated content
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setLoading(false);
+    });
     
-    initializeAuth();
-    
-    // Set up the subscription for auth state changes
+    // Then set up the subscription
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, currentSession) => {
-        // Only update if the session state actually changed
+      (event, currentSession) => {
+        // Only update if the session state actually changed to avoid unnecessary rerenders
         if (
           (currentSession && !session) || 
           (!currentSession && session) || 
@@ -58,6 +45,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
+          
+          if (event === 'SIGNED_IN') {
+            // Only show toast and redirect if this is actually a new sign-in
+            toast({
+              title: "Success",
+              description: "You have been signed in successfully",
+            });
+            
+            // Use setTimeout to ensure state updates have been processed
+            setTimeout(() => {
+              navigate('/home');
+            }, 0);
+          } else if (event === 'SIGNED_OUT') {
+            toast({
+              title: "Signed out",
+              description: "You have been signed out",
+            });
+            
+            // Redirect to auth page on sign-out
+            navigate('/auth');
+          }
         }
       }
     );
@@ -65,43 +73,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate, toast]);
 
-  // Handle navigation in a separate effect to prevent loops
+  // Redirect to /home if user is already logged in and tries to access /auth
   useEffect(() => {
-    // Only handle navigation after initial auth check and when not loading
-    if (authChecked && !loading) {
-      const currentPath = location.pathname;
-      
-      if (user) {
-        // User is logged in
-        if (currentPath === '/auth') {
-          // Redirect to home if on auth page
-          navigate('/home', { replace: true });
-        }
-      } else {
-        // User is not logged in
-        if (currentPath !== '/auth' && currentPath !== '/') {
-          // Redirect to auth page
-          navigate('/auth', { replace: true });
-        }
-      }
+    if (user && !loading && location.pathname === '/auth') {
+      navigate('/home');
     }
-  }, [user, authChecked, loading, location.pathname, navigate]);
+  }, [user, loading, location.pathname, navigate]);
 
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      
-      // Success toast notification
-      toast({
-        title: "Signed in successfully",
-        description: "Welcome back!",
-      });
-      
-      // Navigate handled by the effect
     } catch (error: any) {
       toast({
         title: "Error signing in",

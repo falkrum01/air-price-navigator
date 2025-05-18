@@ -1,11 +1,10 @@
-
 import React, { useState } from "react";
 import { Calendar } from "lucide-react";
 import { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { CalendarIcon } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -15,14 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchParams } from "@/types/flight";
-import { indianAirports } from "@/data/indianAirports";
-import { 
-  Command, 
-  CommandEmpty, 
-  CommandGroup, 
-  CommandInput, 
-  CommandItem 
-} from "@/components/ui/command";
 
 interface SearchFormProps {
   onSearch: (params: SearchParams) => void;
@@ -40,10 +31,6 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
     from: undefined,
     to: undefined,
   });
-  
-  // Popover states for origin and destination
-  const [originOpen, setOriginOpen] = useState(false);
-  const [destinationOpen, setDestinationOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,12 +40,12 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       return;
     }
 
-    // Create search params object and convert Date to string format for API compatibility
-    const searchParams: SearchParams = {
+    // Create search params object without the currency property
+    const searchParams = {
       origin,
       destination,
-      departureDate: departureDate.toISOString().split('T')[0], // Convert Date to string
-      returnDate: tripType === "round" && returnDate ? returnDate.toISOString().split('T')[0] : undefined,
+      departureDate,
+      returnDate: tripType === "round" ? returnDate?.toISOString().split('T')[0] : undefined,
       passengers: parseInt(passengers),
       cabinClass
     };
@@ -89,75 +76,27 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       {/* Origin */}
       <div>
         <Label htmlFor="origin">Origin</Label>
-        <Popover open={originOpen} onOpenChange={setOriginOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={originOpen}
-              className="w-full justify-between"
-            >
-              {origin ? indianAirports.find((airport) => airport.code === origin)?.city || "Select origin" : "Select origin"}
-              <Calendar className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[300px] p-0">
-            <Command>
-              <CommandInput placeholder="Search airport..." />
-              <CommandEmpty>No airport found.</CommandEmpty>
-              <CommandGroup className="max-h-64 overflow-auto">
-                {indianAirports.map((airport) => (
-                  <CommandItem
-                    key={airport.code}
-                    onSelect={() => {
-                      setOrigin(airport.code);
-                      setOriginOpen(false);
-                    }}
-                  >
-                    <span className="font-medium">{airport.city}</span> - <span className="text-sm text-muted-foreground">{airport.code}, {airport.name}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-          </PopoverContent>
-        </Popover>
+        <Input
+          type="text"
+          id="origin"
+          placeholder="Enter origin airport"
+          value={origin}
+          onChange={(e) => setOrigin(e.target.value)}
+          required
+        />
       </div>
 
       {/* Destination */}
       <div>
         <Label htmlFor="destination">Destination</Label>
-        <Popover open={destinationOpen} onOpenChange={setDestinationOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={destinationOpen}
-              className="w-full justify-between"
-            >
-              {destination ? indianAirports.find((airport) => airport.code === destination)?.city || "Select destination" : "Select destination"}
-              <Calendar className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[300px] p-0">
-            <Command>
-              <CommandInput placeholder="Search airport..." />
-              <CommandEmpty>No airport found.</CommandEmpty>
-              <CommandGroup className="max-h-64 overflow-auto">
-                {indianAirports.map((airport) => (
-                  <CommandItem
-                    key={airport.code}
-                    onSelect={() => {
-                      setDestination(airport.code);
-                      setDestinationOpen(false);
-                    }}
-                  >
-                    <span className="font-medium">{airport.city}</span> - <span className="text-sm text-muted-foreground">{airport.code}, {airport.name}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-          </PopoverContent>
-        </Popover>
+        <Input
+          type="text"
+          id="destination"
+          placeholder="Enter destination airport"
+          value={destination}
+          onChange={(e) => setDestination(e.target.value)}
+          required
+        />
       </div>
 
       {/* Date Selection */}
@@ -167,14 +106,17 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
-              className="w-full justify-start text-left font-normal"
+              className={cn(
+                "w-[280px] justify-start text-left font-normal",
+                !date?.from && "text-muted-foreground"
+              )}
             >
-              <Calendar className="mr-2 h-4 w-4" />
-              {departureDate ? (
-                tripType === "round" && returnDate ? (
-                  `${departureDate.toLocaleDateString()} - ${returnDate.toLocaleDateString()}`
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {date?.from ? (
+                date.to ? (
+                  `${date.from?.toLocaleDateString()} - ${date.to?.toLocaleDateString()}`
                 ) : (
-                  departureDate.toLocaleDateString()
+                  date.from?.toLocaleDateString()
                 )
               ) : (
                 <span>Pick a date</span>
@@ -183,23 +125,25 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="center">
             <div className="border rounded-md p-2">
-              <Label>Departure Date</Label>
-              <Input
-                type="date"
-                value={departureDate ? departureDate.toISOString().split('T')[0] : ''}
-                onChange={(e) => setDepartureDate(e.target.value ? new Date(e.target.value) : undefined)}
-                className="mb-2"
-              />
-              {tripType === "round" && (
-                <>
-                  <Label>Return Date</Label>
-                  <Input
-                    type="date"
-                    value={returnDate ? returnDate.toISOString().split('T')[0] : ''}
-                    onChange={(e) => setReturnDate(e.target.value ? new Date(e.target.value) : undefined)}
-                  />
-                </>
-              )}
+              <React.Fragment>
+                <Label>Departure Date</Label>
+                <Input
+                  type="date"
+                  value={departureDate ? departureDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setDepartureDate(e.target.value ? new Date(e.target.value) : undefined)}
+                  className="mb-2"
+                />
+                {tripType === "round" && (
+                  <>
+                    <Label>Return Date</Label>
+                    <Input
+                      type="date"
+                      value={returnDate ? returnDate.toISOString().split('T')[0] : ''}
+                      onChange={(e) => setReturnDate(e.target.value ? new Date(e.target.value) : undefined)}
+                    />
+                  </>
+                )}
+              </React.Fragment>
             </div>
           </PopoverContent>
         </Popover>
@@ -209,7 +153,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       <div>
         <Label htmlFor="passengers">Passengers</Label>
         <Select value={passengers} onValueChange={setPassengers}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-[280px]">
             <SelectValue placeholder="Select number of passengers" />
           </SelectTrigger>
           <SelectContent>
@@ -226,7 +170,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       <div>
         <Label htmlFor="cabinClass">Cabin Class</Label>
         <Select value={cabinClass} onValueChange={setCabinClass}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-[280px]">
             <SelectValue placeholder="Select cabin class" />
           </SelectTrigger>
           <SelectContent>
