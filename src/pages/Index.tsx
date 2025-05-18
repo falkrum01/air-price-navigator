@@ -53,6 +53,97 @@ const Index: React.FC = () => {
         <div className="hidden md:block absolute bottom-0 left-0 w-64 h-64 bg-airblue/5 rounded-full translate-y-1/3 -translate-x-1/3"></div>
         
         <FlightSearch />
+
+        {/* Airline Logos Section */}
+        <div className="container mx-auto mt-12 px-4">
+          <h3 className="text-center text-lg font-medium mb-6">Compare flights across major Indian airlines</h3>
+          <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-10 mb-8">
+            <div className="flex flex-col items-center">
+              <img 
+                src="https://res.cloudinary.com/dbt3gghme/image/upload/b_rgb:FFFFFF/c_pad,w_40,h_40/v1747576681/maharaja_1633694839415_1633694844518_avgw7p.avif" 
+                alt="Air India" 
+                className="h-10 w-10 object-contain" 
+              />
+              <span className="text-xs text-gray-500 mt-2">Air India</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <img 
+                src="https://res.cloudinary.com/dbt3gghme/image/upload/b_rgb:FFFFFF/c_pad,w_40,h_40/v1747576794/images_1_nvudlq.png" 
+                alt="SpiceJet" 
+                className="h-10 w-10 object-contain" 
+              />
+              <span className="text-xs text-gray-500 mt-2">SpiceJet</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <img 
+                src="https://res.cloudinary.com/dbt3gghme/image/upload/b_rgb:FFFFFF/c_pad,w_40,h_40/v1747576214/download_1_e0pnur.png" 
+                alt="Vistara" 
+                className="h-10 w-10 object-contain" 
+              />
+              <span className="text-xs text-gray-500 mt-2">Vistara</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <img 
+                src="https://res.cloudinary.com/dbt3gghme/image/upload/b_rgb:FFFFFF/c_pad,w_40,h_40/v1747576493/images_fosnmj.png" 
+                alt="IndiGo" 
+                className="h-10 w-10 object-contain" 
+              />
+              <span className="text-xs text-gray-500 mt-2">IndiGo</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <img 
+                src="https://res.cloudinary.com/dbt3gghme/image/upload/c_pad,w_40,h_40/v1747575635/go-first.png_akas0s.jpg" 
+                alt="GoAir" 
+                className="h-10 w-10 object-contain" 
+              />
+              <span className="text-xs text-gray-500 mt-2">GoAir</span>
+            </div>
+          </div>
+
+          <h3 className="text-center text-lg font-medium mb-6">Compare prices across travel websites</h3>
+          <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-10">
+            <div className="flex flex-col items-center">
+              <img 
+                src="https://res.cloudinary.com/dbt3gghme/image/upload/b_rgb:FFFFFF/c_pad,w_40,h_40/v1747576930/43eac1170112781.Y3JvcCwzODM1LDMwMDAsNzUwLDA_wrdlg3.png" 
+                alt="Ixigo" 
+                className="h-10 w-10 object-contain" 
+              />
+              <span className="text-xs text-gray-500 mt-2">Ixigo</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <img 
+                src="https://res.cloudinary.com/dbt3gghme/image/upload/b_rgb:FFFFFF/c_pad,w_40,h_40/v1747577231/unnamed_wbrtbx.png" 
+                alt="Paytm" 
+                className="h-10 w-10 object-contain" 
+              />
+              <span className="text-xs text-gray-500 mt-2">Paytm</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <img 
+                src="https://res.cloudinary.com/dbt3gghme/image/upload/b_rgb:FFFFFF/c_pad,w_40,h_40/v1747577359/makemytrip-logo-png_seeklogo-336111_dnlbuo.png" 
+                alt="MakeMyTrip" 
+                className="h-10 w-10 object-contain" 
+              />
+              <span className="text-xs text-gray-500 mt-2">MakeMyTrip</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <img 
+                src="https://res.cloudinary.com/dbt3gghme/image/upload/b_rgb:FFFFFF/c_pad,w_40,h_40/v1747577533/og-goibibo.aba291ed_l3iqdv.png" 
+                alt="Goibibo" 
+                className="h-10 w-10 object-contain" 
+              />
+              <span className="text-xs text-gray-500 mt-2">Goibibo</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <img 
+                src="https://res.cloudinary.com/dbt3gghme/image/upload/b_rgb:FFFFFF/c_pad,w_40,h_40/v1747577679/download_2_mu1xrr.png" 
+                alt="Cleartrip" 
+                className="h-10 w-10 object-contain" 
+              />
+              <span className="text-xs text-gray-500 mt-2">Cleartrip</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Features Section with Indian Icons */}

@@ -1,19 +1,11 @@
-import React, { useState, useEffect } from "react";
-import Layout from "@/components/Layout";
-import { Plane, Filter, RefreshCw, Search, ExternalLink } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Plane, RefreshCw, Search, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 
 // Interface for flight data
@@ -25,13 +17,13 @@ interface Flight {
   last_contact: number;
   longitude: number;
   latitude: number;
-  baro_altitude: number; // meters
+  baro_altitude: number;
   on_ground: boolean;
-  velocity: number; // m/s
-  true_track: number; // degrees
-  vertical_rate: number; // m/s
+  velocity: number;
+  true_track: number;
+  vertical_rate: number;
   sensors?: number[];
-  geo_altitude?: number; // meters
+  geo_altitude?: number;
   squawk?: string;
   spi: boolean;
   position_source: number;
@@ -48,11 +40,71 @@ const FlightTracker: React.FC = () => {
   const [dataTimestamp, setDataTimestamp] = useState<Date>(new Date());
   const [showStats, setShowStats] = useState<boolean>(true);
 
-  // Mock function to fetch flights
-  const fetchFlights = async () => {
+  // Function to get airline name from ICAO24 address
+  const getAirlineFromIcao24 = (icao24: string): string => {
+    // This is a simplified mapping - in a real app, you'd want a more comprehensive mapping
+    const airlinePrefixes: Record<string, string> = {
+      '8008': 'IndiGo',
+      '8009': 'Air India',
+      '8010': 'SpiceJet',
+      '8011': 'Vistara',
+      '8960': 'Emirates',
+      '8961': 'Qatar Airways',
+      '8962': 'Singapore Airlines',
+      '8963': 'British Airways',
+      '8964': 'Lufthansa',
+    };
+    
+    const prefix = icao24.substring(0, 4);
+    return airlinePrefixes[prefix] || 'Unknown Airline';
+  };
+
+  // Generate mock flight data for fallback
+  const generateMockFlights = (): Flight[] => {
+    const countries = ["India", "UAE", "USA", "UK", "Singapore", "Thailand", "China", "Japan", "Australia", "Germany"];
+    const airlines = ["Air India", "IndiGo", "SpiceJet", "Vistara", "Emirates", "Singapore Airlines", "British Airways", "Delta", "Qantas"];
+    
+    return Array(200)
+      .fill(null)
+      .map((_, index) => {
+        const randomCountry = countries[Math.floor(Math.random() * countries.length)];
+        const randomAirline = airlines[Math.floor(Math.random() * airlines.length)];
+        const isOnGround = Math.random() > 0.7;
+        const lat = 8 + Math.random() * 30; // Roughly India region
+        const lon = 70 + Math.random() * 25;
+        const altitude = isOnGround ? 0 : 5000 + Math.random() * 35000;
+        const velocity = isOnGround ? 0 : 200 + Math.random() * 500;
+        const callsign = `${randomAirline.substring(0, 2).toUpperCase()}${100 + Math.floor(Math.random() * 900)}`;
+        
+        return {
+          icao24: `8${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+          callsign,
+          origin_country: randomCountry,
+          time_position: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 3600),
+          last_contact: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 60),
+          longitude: lon,
+          latitude: lat,
+          baro_altitude: altitude,
+          on_ground: isOnGround,
+          velocity,
+          true_track: Math.random() * 360,
+          vertical_rate: isOnGround ? 0 : (Math.random() > 0.5 ? 1 : -1) * Math.random() * 10,
+          sensors: [],
+          geo_altitude: altitude,
+          squawk: Math.floor(1000 + Math.random() * 9000).toString(),
+          spi: false,
+          position_source: 0,
+          airline: randomAirline
+        };
+      });
+  };
+
+  // Function to fetch flights from API or use mock data
+  const fetchFlights = useCallback(async () => {
     setLoading(true);
     try {
-      // For demo purposes, generate mock flights
+      // For demo purposes, we'll use mock data
+      // In a real app, you would fetch from an API
       const mockFlights = generateMockFlights();
       setFlights(mockFlights);
       setFilteredFlights(mockFlights);
@@ -72,66 +124,22 @@ const FlightTracker: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Generate mock flight data
-  const generateMockFlights = (): Flight[] => {
-    const countries = ["India", "UAE", "USA", "UK", "Singapore", "Thailand", "China", "Japan", "Australia", "Germany"];
-    const airlines = ["Air India", "IndiGo", "SpiceJet", "Vistara", "Emirates", "Singapore Airlines", "British Airways", "Delta", "Qantas"];
-    
-    return Array(200)
-      .fill(null)
-      .map((_, index) => {
-        const country = countries[Math.floor(Math.random() * countries.length)];
-        const airline = airlines[Math.floor(Math.random() * airlines.length)];
-        const callsign = `${airline.substring(0, 3)}${Math.floor(1000 + Math.random() * 9000)}`;
-        
-        // Generate coordinates - concentrate more flights around India
-        let longitude, latitude;
-        if (Math.random() < 0.4) {
-          // 40% of flights around India
-          longitude = 73 + Math.random() * 25; // Approx longitude range of India
-          latitude = 8 + Math.random() * 28; // Approx latitude range of India
-        } else {
-          // Rest worldwide
-          longitude = -180 + Math.random() * 360;
-          latitude = -80 + Math.random() * 160;
-        }
-
-        return {
-          icao24: Math.random().toString(36).substring(2, 8),
-          callsign: callsign,
-          origin_country: country,
-          time_position: Math.floor(Date.now() / 1000),
-          last_contact: Math.floor(Date.now() / 1000),
-          longitude,
-          latitude,
-          baro_altitude: Math.random() * 12000,
-          on_ground: Math.random() < 0.1, // 10% of flights on ground
-          velocity: 200 + Math.random() * 300,
-          true_track: Math.random() * 360,
-          vertical_rate: -5 + Math.random() * 10,
-          spi: false,
-          position_source: 0,
-          airline
-        };
-      });
-  };
-
-  // Filter flights based on search and country filter
+  // Filter flights based on search term and country
   useEffect(() => {
     let filtered = [...flights];
     
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        flight => 
-          flight.callsign?.toLowerCase().includes(term) || 
-          flight.airline?.toLowerCase().includes(term)
+      filtered = filtered.filter(flight => 
+        flight.callsign.toLowerCase().includes(term) || 
+        flight.airline?.toLowerCase().includes(term) ||
+        flight.origin_country.toLowerCase().includes(term)
       );
     }
     
-    if (countryFilter && countryFilter !== "all") {
+    if (countryFilter !== "all") {
       filtered = filtered.filter(flight => flight.origin_country === countryFilter);
     }
     
@@ -147,7 +155,7 @@ const FlightTracker: React.FC = () => {
     
     // Clean up interval on component unmount
     return () => clearInterval(refreshInterval);
-  }, []);
+  }, [fetchFlights]);
 
   // Get unique countries for the filter
   const countries = [...new Set(flights.map(flight => flight.origin_country))].sort();
@@ -157,297 +165,273 @@ const FlightTracker: React.FC = () => {
     setSelectedFlight(flight);
   };
 
-  // Open general FlightRadar24 website
-  const openFlightRadar = () => {
-    window.open("https://www.flightradar24.com/14.90,78.33/5", '_blank');
+  // Open FlightRadar24 website
+  const openFlightMap = () => {
+    window.open("https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://www.flightradar24.com/&ved=2ahUKEwjJ9uOTgK2NAxWQR2wGHYtfKesQFnoECAoQAQ&usg=AOvVaw3Kl8F_pSsWPVMsjJu5YYM7", '_blank');
   };
   
-  // Open specific flight on FlightRadar24
+  // Open specific flight details on FlightRadar24
   const openFlightDetails = () => {
     if (selectedFlight) {
       const flightId = selectedFlight.callsign?.trim() || selectedFlight.icao24;
       window.open(`https://www.flightradar24.com/${flightId}`, '_blank');
     }
   };
-  
+
+  // Format altitude from meters to feet
+  const formatAltitude = (meters: number): string => {
+    return meters ? `${Math.round(meters * 3.28084).toLocaleString()} ft` : 'N/A';
+  };
+
+  // Format speed from m/s to km/h
+  const formatSpeed = (mps: number): string => {
+    return mps ? `${Math.round(mps * 3.6)} km/h` : 'N/A';
+  };
+
   // Format a timestamp from Unix time
   const formatTimestamp = (timestamp: number): string => {
-    return new Date(timestamp * 1000).toLocaleTimeString();
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleTimeString();
   };
 
   return (
-    <Layout>
-      <div className="bg-gray-50 min-h-screen">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-start gap-6">
-            {/* Left sidebar */}
-            <div className="w-full md:w-1/4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold flex items-center">
-                      <Plane className="h-5 w-5 mr-2 text-airblue" />
-                      Flight Tracker
-                    </h3>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={fetchFlights}
-                      disabled={loading}
-                    >
-                      <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
-                      Refresh
-                    </Button>
-                  </div>
-                  
-                  <p className="text-xs text-gray-500 mb-4">
-                    Last updated: {dataTimestamp.toLocaleTimeString()}
-                  </p>
-                  
-                  <div className="mb-4">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Search flights..."
-                        className="pl-8"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="mb-4">
-                    <Label htmlFor="country-filter">Filter by Country</Label>
-                    <Select 
-                      value={countryFilter} 
-                      onValueChange={setCountryFilter}
-                    >
-                      <SelectTrigger id="country-filter">
-                        <SelectValue placeholder="All Countries" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Countries</SelectItem>
-                        {countries.map(country => (
-                          <SelectItem key={country} value={country}>
-                            {country}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <Separator className="my-4" />
-                  
-                  <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                    {loading ? (
-                      Array(5).fill(null).map((_, i) => (
-                        <div key={i} className="p-3 border rounded-md">
-                          <Skeleton className="h-5 w-1/2 mb-2" />
-                          <Skeleton className="h-4 w-3/4 mb-2" />
-                          <Skeleton className="h-4 w-1/4" />
-                        </div>
-                      ))
-                    ) : (
-                      filteredFlights.slice(0, 15).map((flight) => (
-                        <div 
-                          key={flight.icao24}
-                          className={`p-3 border rounded-md cursor-pointer transition-colors ${
-                            selectedFlight?.icao24 === flight.icao24 
-                            ? "bg-airblue-light border-airblue" 
-                            : "hover:bg-gray-50"
-                          }`}
-                          onClick={() => handleSelectFlight(flight)}
-                        >
-                          <div className="font-medium">{flight.callsign}</div>
-                          <div className="text-sm text-gray-600">{flight.airline || "Unknown Airline"}</div>
-                          <div className="text-xs text-gray-500">From: {flight.origin_country}</div>
-                        </div>
-                      ))
-                    )}
-                    
-                    {!loading && filteredFlights.length === 0 && (
-                      <p className="text-center text-gray-500 py-4">
-                        No flights match your filter criteria
-                      </p>
-                    )}
-                    
-                    {!loading && filteredFlights.length > 15 && (
-                      <p className="text-center text-xs text-gray-500 pt-2">
-                        + {filteredFlights.length - 15} more flights
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {showStats && (
-                <Card className="mt-4">
-                  <CardContent className="p-4">
-                    <h3 className="text-lg font-semibold mb-3 flex justify-between">
-                      <span>{selectedFlight ? `Flight Details: ${selectedFlight.callsign}` : 'Statistics'}</span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 p-0" 
-                        onClick={() => setShowStats(false)}
-                      >
-                        <span className="sr-only">Close</span>
-                        ×
-                      </Button>
-                    </h3>
-                    
-                    {selectedFlight ? (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="border rounded-md p-2">
-                            <div className="text-xs text-gray-500">Callsign</div>
-                            <div className="font-medium">{selectedFlight.callsign}</div>
-                          </div>
-                          <div className="border rounded-md p-2">
-                            <div className="text-xs text-gray-500">Airline</div>
-                            <div className="font-medium">{selectedFlight.airline || "Unknown"}</div>
-                          </div>
-                          <div className="border rounded-md p-2">
-                            <div className="text-xs text-gray-500">ICAO</div>
-                            <div className="font-medium">{selectedFlight.icao24}</div>
-                          </div>
-                          <div className="border rounded-md p-2">
-                            <div className="text-xs text-gray-500">Country</div>
-                            <div className="font-medium">{selectedFlight.origin_country}</div>
-                          </div>
-                          <div className="border rounded-md p-2">
-                            <div className="text-xs text-gray-500">Status</div>
-                            <div className="font-medium">{selectedFlight.on_ground ? "On Ground" : "In Air"}</div>
-                          </div>
-                          <div className="border rounded-md p-2">
-                            <div className="text-xs text-gray-500">Altitude</div>
-                            <div className="font-medium">{Math.round(selectedFlight.baro_altitude)} m</div>
-                          </div>
-                          <div className="border rounded-md p-2">
-                            <div className="text-xs text-gray-500">Speed</div>
-                            <div className="font-medium">{Math.round(selectedFlight.velocity * 3.6)} km/h</div>
-                          </div>
-                          <div className="border rounded-md p-2">
-                            <div className="text-xs text-gray-500">Heading</div>
-                            <div className="font-medium">{Math.round(selectedFlight.true_track)}°</div>
-                          </div>
-                          <div className="border rounded-md p-2">
-                            <div className="text-xs text-gray-500">Vertical Rate</div>
-                            <div className="font-medium">{selectedFlight.vertical_rate.toFixed(1)} m/s</div>
-                          </div>
-                          <div className="border rounded-md p-2">
-                            <div className="text-xs text-gray-500">Position</div>
-                            <div className="font-medium text-xs">{selectedFlight.latitude.toFixed(4)}, {selectedFlight.longitude.toFixed(4)}</div>
-                          </div>
-                          {selectedFlight.squawk && (
-                            <div className="border rounded-md p-2">
-                              <div className="text-xs text-gray-500">Squawk</div>
-                              <div className="font-medium">{selectedFlight.squawk}</div>
-                            </div>
-                          )}
-                          <div className="border rounded-md p-2">
-                            <div className="text-xs text-gray-500">Last Contact</div>
-                            <div className="font-medium">{formatTimestamp(selectedFlight.last_contact)}</div>
-                          </div>
-                        </div>
-
-                        <Button 
-                          className="w-full mt-2" 
-                          onClick={openFlightDetails}
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Track on FlightRadar24
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="border rounded-md p-3 text-center">
-                          <div className="text-2xl font-bold text-airblue">{flights.length}</div>
-                          <div className="text-xs text-gray-500">Total Flights</div>
-                        </div>
-                        <div className="border rounded-md p-3 text-center">
-                          <div className="text-2xl font-bold text-airblue">{countries.length}</div>
-                          <div className="text-xs text-gray-500">Countries</div>
-                        </div>
-                        <div className="border rounded-md p-3 text-center">
-                          <div className="text-2xl font-bold text-airblue">
-                            {flights.filter(f => !f.on_ground).length}
-                          </div>
-                          <div className="text-xs text-gray-500">In Air</div>
-                        </div>
-                        <div className="border rounded-md p-3 text-center">
-                          <div className="text-2xl font-bold text-airblue">
-                            {flights.filter(f => f.on_ground).length}
-                          </div>
-                          <div className="text-xs text-gray-500">On Ground</div>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-            
-            {/* Main map area */}
-            <div className="w-full md:w-3/4 bg-white rounded-lg shadow-sm border">
-              <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
-                <h2 className="font-semibold">Live Flight Tracker</h2>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowStats(!showStats)}
-                  >
-                    {showStats ? "Hide Stats" : "Show Stats"}
-                  </Button>
-                  <Button 
-                    variant="default"
-                    size="sm"
-                    onClick={openFlightRadar}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Open Flight Tracker
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="relative h-[70vh] flex items-center justify-center bg-gray-50">
-                <div className="text-center p-8">
-                  <Plane className="mx-auto h-16 w-16 text-airblue mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">Live Flight Tracking</h3>
-                  <p className="mb-6 text-gray-600">
-                    Click on a flight from the list to view its live tracking information,
-                    or open the full Flight Radar tracker to explore all flights.
-                  </p>
-                  
-                  <Button 
-                    className="mx-auto"
-                    onClick={openFlightRadar}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Open Flight Radar
-                  </Button>
-                  
-                  <p className="mt-6 text-sm text-gray-500">
-                    Flight tracking provided by FlightRadar24
-                  </p>
-                </div>
-              </div>
-            </div>
+    <div className="container mx-auto py-4 sm:py-6 px-3 sm:px-4">
+      <div className="flex flex-col space-y-3 sm:space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex items-center">
+            <Plane className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-blue-500 flex-shrink-0" />
+            <h1 className="text-xl sm:text-2xl font-bold">Flight Tracker</h1>
           </div>
-          
-          {/* Selected flight details panel */}
-          
-          {/* Disclaimer */}
-          <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500">
-              Flight information provided is simulated for demonstration purposes. 
-              Live tracking data is provided by FlightRadar24.
-            </p>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={fetchFlights}
+              disabled={loading}
+              className="flex-1 sm:flex-none justify-center"
+            >
+              <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+              <span className="text-xs sm:text-sm">Refresh</span>
+            </Button>
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={openFlightMap}
+              className="flex-1 sm:flex-none justify-center"
+            >
+              <ExternalLink className="h-4 w-4 mr-1.5" />
+              <span className="text-xs sm:text-sm">FlightRadar24</span>
+            </Button>
           </div>
         </div>
+        
+        <div className="bg-gray-100 p-3 sm:p-4 rounded-lg">
+          <div className="text-xs sm:text-sm text-gray-500 mb-2">
+            Last updated: {dataTimestamp.toLocaleTimeString()}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <div className="relative sm:col-span-2 lg:col-span-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search by callsign, airline..."
+                className="pl-8 text-sm sm:text-base h-10 sm:h-11"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-1">
+              <Select value={countryFilter} onValueChange={setCountryFilter}>
+                <SelectTrigger className="h-10 sm:h-11 text-sm sm:text-base">
+                  <SelectValue placeholder="Filter by country" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Countries</SelectItem>
+                  {countries.map((country) => (
+                    <SelectItem key={country} value={country}>
+                      {country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end sm:col-span-2 lg:col-span-1">
+              <div className="bg-white px-3 py-1.5 rounded-md flex items-center flex-wrap justify-center sm:justify-end gap-1.5 text-xs sm:text-sm">
+                <span className="whitespace-nowrap">Showing:</span>
+                <Badge variant="outline" className="h-5 sm:h-6">{filteredFlights.length}</Badge>
+                <span>of</span>
+                <Badge variant="outline" className="h-5 sm:h-6">{flights.length}</Badge>
+                <span className="whitespace-nowrap">flights</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
+          {/* Flight list */}
+          <div className="w-full lg:w-1/3 xl:w-1/4">
+            <Card className="h-[50vh] sm:h-[65vh] overflow-hidden flex flex-col">
+              <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
+                <CardTitle className="text-base sm:text-lg">Flight List</CardTitle>
+              </CardHeader>
+              <div className="overflow-y-auto flex-grow -mt-1">
+                {filteredFlights.length > 0 ? (
+                  <div className="divide-y">
+                    {filteredFlights.map((flight) => (
+                      <div
+                        key={flight.icao24}
+                        className={`p-2 sm:p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
+                          selectedFlight?.icao24 === flight.icao24 ? 'bg-gray-50' : ''
+                        }`}
+                        onClick={() => handleSelectFlight(flight)}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="font-medium text-sm sm:text-base truncate max-w-[60%]">
+                            {flight.callsign || 'N/A'}
+                          </div>
+                          <Badge 
+                            variant={flight.on_ground ? "outline" : "default"}
+                            className="text-xs sm:text-sm h-5 sm:h-6"
+                          >
+                            {flight.on_ground ? "Ground" : "Air"}
+                          </Badge>
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-500 mt-0.5 truncate">
+                          <span className="truncate">{flight.airline || 'Unknown'}</span>
+                          <span className="mx-1.5">•</span>
+                          <span className="truncate">{flight.origin_country}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-gray-500 text-sm sm:text-base">
+                    {loading ? (
+                      <div className="flex items-center justify-center h-full">
+                        <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                        Loading flights...
+                      </div>
+                    ) : (
+                      "No flights found matching your criteria"
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+          
+          {/* Flight Details */}
+          <div className="flex-1">
+            <Card className="h-[50vh] sm:h-[65vh] overflow-hidden">
+              <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
+                <CardTitle className="text-base sm:text-lg">Flight Details</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {selectedFlight ? (
+                  <div className="p-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                      <div>
+                        <h3 className="text-lg sm:text-xl font-bold">{selectedFlight.callsign || 'N/A'}</h3>
+                        <p className="text-sm text-gray-500">
+                          {selectedFlight.airline} • {selectedFlight.origin_country}
+                        </p>
+                      </div>
+                      <Badge 
+                        variant={selectedFlight.on_ground ? "outline" : "default"}
+                        className="text-xs sm:text-sm px-2.5 py-1 sm:px-3 sm:py-1.5"
+                      >
+                        {selectedFlight.on_ground ? "On Ground" : "In Air"}
+                      </Badge>
+                    </div>
+                    <Separator className="my-3 sm:my-4" />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                      <div className="border rounded-md p-2">
+                        <div className="text-[10px] xs:text-xs text-gray-500">Altitude</div>
+                        <div className="font-medium text-sm sm:text-base">
+                          {formatAltitude(selectedFlight.baro_altitude)}
+                        </div>
+                      </div>
+                      <div className="border rounded-md p-2">
+                        <div className="text-[10px] xs:text-xs text-gray-500">Speed</div>
+                        <div className="font-medium text-sm sm:text-base">
+                          {formatSpeed(selectedFlight.velocity)}
+                        </div>
+                      </div>
+                      <div className="border rounded-md p-2">
+                        <div className="text-[10px] xs:text-xs text-gray-500">Heading</div>
+                        <div className="font-medium text-sm sm:text-base">
+                          {Math.round(selectedFlight.true_track)}°
+                        </div>
+                      </div>
+                      <div className="border rounded-md p-2">
+                        <div className="text-[10px] xs:text-xs text-gray-500">Vertical Rate</div>
+                        <div className="font-medium text-sm sm:text-base">
+                          {selectedFlight.vertical_rate.toFixed(1)} m/s
+                        </div>
+                      </div>
+                      <div className="border rounded-md p-2">
+                        <div className="text-[10px] xs:text-xs text-gray-500">Position</div>
+                        <div className="font-medium text-[10px] xs:text-xs">
+                          {selectedFlight.latitude.toFixed(4)}, {selectedFlight.longitude.toFixed(4)}
+                        </div>
+                      </div>
+                      <div className="border rounded-md p-2">
+                        <div className="text-[10px] xs:text-xs text-gray-500">Last Contact</div>
+                        <div className="font-medium text-sm sm:text-base">
+                          {formatTimestamp(selectedFlight.last_contact)}
+                        </div>
+                      </div>
+                      {selectedFlight.squawk && (
+                        <div className="border rounded-md p-2">
+                          <div className="text-[10px] xs:text-xs text-gray-500">Squawk</div>
+                          <div className="font-medium text-sm sm:text-base">{selectedFlight.squawk}</div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-4 sm:mt-6 text-center">
+                      <Button 
+                        variant="default" 
+                        onClick={openFlightDetails}
+                        className="w-full sm:w-auto h-9 sm:h-10 text-sm sm:text-base"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />
+                        Track on FlightRadar24
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center p-6 sm:p-8">
+                      <Plane className="mx-auto h-14 sm:h-16 w-14 sm:w-16 text-blue-500 mb-3 sm:mb-4" />
+                      <h3 className="text-lg sm:text-xl font-semibold mb-2">Live Flight Tracking</h3>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Select a flight to view detailed information
+                      </p>
+                      <Button 
+                        variant="default" 
+                        onClick={openFlightMap}
+                        className="mt-2"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Open FlightRadar24
+                      </Button>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Flight data provided by FlightRadar24
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        
+        <div className="text-center text-xs text-gray-500 mt-4">
+          Flight information provided is for demonstration purposes.
+          For accurate tracking, please visit <a href="https://www.flightradar24.com" target="_blank" rel="noopener noreferrer" className="underline">FlightRadar24</a>.
+        </div>
       </div>
-    </Layout>
+    </div>
   );
 };
 

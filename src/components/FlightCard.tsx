@@ -6,16 +6,20 @@ import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { getAirlineLogo } from "@/data/airlineLogos";
 
 interface FlightCardProps {
   flight: Flight;
-  onBook: (flightDetails: any) => void;
+  onBook: (flightDetails: Partial<Flight> & {
+    flightNumber?: string;
+    passengers?: number;
+    cabinClass?: string;
+  }) => void;
 }
 
 const FlightCard: React.FC<FlightCardProps> = ({ flight, onBook }) => {
   const {
     airline,
-    airlineLogo,
     origin,
     destination,
     departureTime,
@@ -26,6 +30,10 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBook }) => {
     website,
     websiteLogo,
   } = flight;
+  
+  // Get airline and website logos from our centralized mapping
+  const airlineLogo = getAirlineLogo(airline);
+  const websiteLogoUrl = getAirlineLogo(website);
 
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -76,9 +84,9 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBook }) => {
             <img
               src={airlineLogo}
               alt={airline}
-              className="w-10 h-10 object-contain"
+              className="h-6 object-contain"
               onError={(e) => {
-                // Fallback if image fails to load
+                console.log(`Failed to load logo for ${airline}`);
                 (e.target as HTMLImageElement).src = "/placeholder.svg";
               }}
             />
@@ -101,21 +109,15 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBook }) => {
 
         {/* Website info */}
         <div className="flex items-center space-x-3">
-          {websiteLogo ? (
-            <img
-              src={websiteLogo}
-              alt={website}
-              className="w-10 h-10 object-contain"
-              onError={(e) => {
-                // Fallback if image fails to load
-                (e.target as HTMLImageElement).src = "/placeholder.svg";
-              }}
-            />
-          ) : (
-            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
-              {website.substring(0, 2)}
-            </div>
-          )}
+          <img
+            src={websiteLogoUrl}
+            alt={website}
+            className="w-10 h-10 object-contain"
+            onError={(e) => {
+              // Fallback if image fails to load
+              (e.target as HTMLImageElement).src = "/placeholder.svg";
+            }}
+          />
           <span className="text-sm font-medium">{website}</span>
         </div>
       </div>

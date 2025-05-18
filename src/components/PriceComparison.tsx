@@ -40,7 +40,22 @@ const PriceComparison: React.FC<PriceComparisonProps> = ({
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [sortOption, setSortOption] = useState<string>("price-asc");
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [selectedFlightDetails, setSelectedFlightDetails] = useState<any>(null);
+  interface BookingDetails {
+    airline: string;
+    flightNumber: string;
+    price: number;
+    origin: string;
+    destination: string;
+    departureDate: string;
+    departureTime: string;
+    arrivalTime: string;
+    duration: string;
+    passengers: number;
+    cabinClass: string;
+    returnDate?: string; // Make returnDate optional
+  }
+
+  const [selectedFlightDetails, setSelectedFlightDetails] = useState<BookingDetails | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -57,7 +72,7 @@ const PriceComparison: React.FC<PriceComparisonProps> = ({
             {
               id: "AI101",
               airline: "Air India",
-              airlineLogo: "https://seeklogo.com/images/A/air-india-logo-6C288EE1B0-seeklogo.com.png",
+              airlineLogo: "https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Indian_Airlines_logo.svg/1200px-Indian_Airlines_logo.svg.png",
               origin: origin,
               destination: destination,
               departureDate: departureDate,
@@ -72,7 +87,7 @@ const PriceComparison: React.FC<PriceComparisonProps> = ({
             {
               id: "SG405",
               airline: "SpiceJet",
-              airlineLogo: "https://seeklogo.com/images/S/spicejet-logo-768009B71F-seeklogo.com.png",
+              airlineLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/SpiceJet_Logo_%28text%29.svg/2560px-SpiceJet_Logo_%28text%29.svg.png",
               origin: origin,
               destination: destination,
               departureDate: departureDate,
@@ -87,7 +102,7 @@ const PriceComparison: React.FC<PriceComparisonProps> = ({
             {
               id: "UK969",
               airline: "Vistara",
-              airlineLogo: "https://seeklogo.com/images/V/vistara-logo-91C2A3242D-seeklogo.com.png",
+              airlineLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Vistara_logo.svg/2560px-Vistara_logo.svg.png",
               origin: origin,
               destination: destination,
               departureDate: departureDate,
@@ -102,7 +117,7 @@ const PriceComparison: React.FC<PriceComparisonProps> = ({
             {
               id: "6E235",
               airline: "IndiGo",
-              airlineLogo: "https://seeklogo.com/images/I/indigo-airlines-logo-DBEBF52533-seeklogo.com.png",
+              airlineLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/IndiGo_Airlines_logo.svg/2560px-IndiGo_Airlines_logo.svg.png",
               origin: origin,
               destination: destination,
               departureDate: departureDate,
@@ -117,7 +132,7 @@ const PriceComparison: React.FC<PriceComparisonProps> = ({
             {
               id: "G8456",
               airline: "GoAir",
-              airlineLogo: "https://seeklogo.com/images/G/go-air-logo-4E7AE3C53B-seeklogo.com.png",
+              airlineLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Go_First_Logo.svg/1200px-Go_First_Logo.svg.png",
               origin: origin,
               destination: destination,
               departureDate: departureDate,
@@ -212,13 +227,21 @@ const PriceComparison: React.FC<PriceComparisonProps> = ({
     setSortOption("price-asc");
   };
 
-  const handleBookingClick = (flightDetails: any) => {
+  const handleBookingClick = (flightDetails: Flight) => {
     // Prepare booking details with additional information
-    const bookingDetails = {
-      ...flightDetails,
+    const bookingDetails: BookingDetails = {
+      airline: flightDetails.airline,
+      flightNumber: flightDetails.id || `${flightDetails.airline}-${Math.floor(Math.random() * 1000)}`,
+      price: flightDetails.price,
+      origin: flightDetails.origin,
+      destination: flightDetails.destination,
+      departureDate: flightDetails.departureDate,
+      departureTime: flightDetails.departureTime,
+      arrivalTime: flightDetails.arrivalTime,
+      duration: flightDetails.duration,
       passengers: parseInt(passengers.toString()),
       cabinClass,
-      returnDate
+      ...(returnDate && { returnDate }) // Only include returnDate if it exists
     };
     
     setSelectedFlightDetails(bookingDetails);

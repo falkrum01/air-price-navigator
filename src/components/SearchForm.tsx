@@ -32,8 +32,8 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
     from: undefined,
     to: undefined,
   });
-  const [originOpen, setOriginOpen] = useState(false);
-  const [destinationOpen, setDestinationOpen] = useState(false);
+  // State for date selection only
+  // No need for open/close state with Select component
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,85 +79,35 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       {/* Origin */}
       <div>
         <Label htmlFor="origin">Origin</Label>
-        <Popover open={originOpen} onOpenChange={setOriginOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={originOpen}
-              className="w-full justify-between"
-            >
-              {origin 
-                ? indianAirports.find((airport) => airport.iata_code === origin)?.city || "Select origin"
-                : "Select origin"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[300px] p-0" align="start">
-            <Command>
-              <CommandInput placeholder="Search airports..." className="h-9" />
-              <CommandEmpty>No airport found.</CommandEmpty>
-              <CommandGroup className="max-h-[300px] overflow-auto">
-                {indianAirports.map((airport) => (
-                  <CommandItem
-                    key={airport.iata_code}
-                    value={airport.iata_code + " " + airport.name + " " + airport.city}
-                    onSelect={() => {
-                      setOrigin(airport.iata_code);
-                      setOriginOpen(false);
-                    }}
-                  >
-                    <span>{airport.city}</span>
-                    <span className="ml-2 text-sm text-muted-foreground">
-                      {airport.name} ({airport.iata_code})
-                    </span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-          </PopoverContent>
-        </Popover>
+        <Select value={origin} onValueChange={setOrigin}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select origin airport" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {indianAirports.map((airport) => (
+              <SelectItem key={airport.iata_code} value={airport.iata_code}>
+                {airport.city} - {airport.name} ({airport.iata_code})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Destination */}
       <div>
         <Label htmlFor="destination">Destination</Label>
-        <Popover open={destinationOpen} onOpenChange={setDestinationOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={destinationOpen}
-              className="w-full justify-between"
-            >
-              {destination 
-                ? indianAirports.find((airport) => airport.iata_code === destination)?.city || "Select destination"
-                : "Select destination"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[300px] p-0" align="start">
-            <Command>
-              <CommandInput placeholder="Search airports..." className="h-9" />
-              <CommandEmpty>No airport found.</CommandEmpty>
-              <CommandGroup className="max-h-[300px] overflow-auto">
-                {indianAirports.map((airport) => (
-                  <CommandItem
-                    key={airport.iata_code}
-                    value={airport.iata_code + " " + airport.name + " " + airport.city}
-                    onSelect={() => {
-                      setDestination(airport.iata_code);
-                      setDestinationOpen(false);
-                    }}
-                  >
-                    <span>{airport.city}</span>
-                    <span className="ml-2 text-sm text-muted-foreground">
-                      {airport.name} ({airport.iata_code})
-                    </span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-          </PopoverContent>
-        </Popover>
+        <Select value={destination} onValueChange={setDestination}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select destination airport" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {indianAirports.map((airport) => (
+              <SelectItem key={airport.iata_code} value={airport.iata_code}>
+                {airport.city} - {airport.name} ({airport.iata_code})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Date Selection */}
