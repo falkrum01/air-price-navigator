@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,17 +26,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const location = useLocation();
 
   useEffect(() => {
-    // First get the initial session to prevent a flash of unauthenticated content
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+    // First get the initial session
+    const initializeAuth = async () => {
+      setLoading(true);
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      // Only update if there's a change
+      if (currentSession !== session) {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+      }
+      
       setLoading(false);
-    });
+    };
     
-    // Then set up the subscription
+    initializeAuth();
+    
+    // Set up the subscription
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        // Only update if the session state actually changed to avoid unnecessary rerenders
+      (_event, currentSession) => {
+        // Only update if the session state actually changed
         if (
           (currentSession && !session) || 
           (!currentSession && session) || 
@@ -45,27 +53,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
-          
-          if (event === 'SIGNED_IN') {
-            // Only show toast and redirect if this is actually a new sign-in
-            toast({
-              title: "Success",
-              description: "You have been signed in successfully",
-            });
-            
-            // Use setTimeout to ensure state updates have been processed
-            setTimeout(() => {
-              navigate('/home');
-            }, 0);
-          } else if (event === 'SIGNED_OUT') {
-            toast({
-              title: "Signed out",
-              description: "You have been signed out",
-            });
-            
-            // Redirect to auth page on sign-out
-            navigate('/auth');
-          }
         }
       }
     );
@@ -73,12 +60,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate, toast]);
+  }, []);
 
-  // Redirect to /home if user is already logged in and tries to access /auth
+  // Handle navigation based on auth state, but separate from the auth state change
   useEffect(() => {
-    if (user && !loading && location.pathname === '/auth') {
-      navigate('/home');
+    if (!loading) {
+      if (user && location.pathname === '/auth') {
+        // If user is logged in and on /auth, redirect to /home
+        navigate('/home', { replace: true });
+      } else if (!user && location.pathname !== '/auth' && location.pathname !== '/') {
+        // If not logged in and not on auth page or root, redirect to /auth
+        navigate('/auth', { replace: true });
+      }
     }
   }, [user, loading, location.pathname, navigate]);
 

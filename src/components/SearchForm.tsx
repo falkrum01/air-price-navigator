@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import { Calendar as CalendarIcon } from "lucide-react"; // Fix: Import from lucide-react instead
+import React, { useState, useEffect } from "react";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
@@ -15,6 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchParams } from "@/types/flight";
+import { indianAirports } from "@/data/indianAirports";
+import { 
+  Command, 
+  CommandEmpty, 
+  CommandGroup, 
+  CommandInput, 
+  CommandItem 
+} from "@/components/ui/command";
 
 interface SearchFormProps {
   onSearch: (params: SearchParams) => void;
@@ -32,6 +40,10 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
     from: undefined,
     to: undefined,
   });
+  
+  // Popover states for origin and destination
+  const [originOpen, setOriginOpen] = useState(false);
+  const [destinationOpen, setDestinationOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +57,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
     const searchParams: SearchParams = {
       origin,
       destination,
-      departureDate: departureDate.toISOString().split('T')[0], // Fix: Convert Date to string
+      departureDate: departureDate.toISOString().split('T')[0], // Convert Date to string
       returnDate: tripType === "round" && returnDate ? returnDate.toISOString().split('T')[0] : undefined,
       passengers: parseInt(passengers),
       cabinClass
@@ -77,27 +89,75 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       {/* Origin */}
       <div>
         <Label htmlFor="origin">Origin</Label>
-        <Input
-          type="text"
-          id="origin"
-          placeholder="Enter origin airport"
-          value={origin}
-          onChange={(e) => setOrigin(e.target.value)}
-          required
-        />
+        <Popover open={originOpen} onOpenChange={setOriginOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={originOpen}
+              className="w-full justify-between"
+            >
+              {origin ? indianAirports.find((airport) => airport.code === origin)?.city || "Select origin" : "Select origin"}
+              <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0">
+            <Command>
+              <CommandInput placeholder="Search airport..." />
+              <CommandEmpty>No airport found.</CommandEmpty>
+              <CommandGroup className="max-h-64 overflow-auto">
+                {indianAirports.map((airport) => (
+                  <CommandItem
+                    key={airport.code}
+                    onSelect={() => {
+                      setOrigin(airport.code);
+                      setOriginOpen(false);
+                    }}
+                  >
+                    <span className="font-medium">{airport.city}</span> - <span className="text-sm text-muted-foreground">{airport.code}, {airport.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Destination */}
       <div>
         <Label htmlFor="destination">Destination</Label>
-        <Input
-          type="text"
-          id="destination"
-          placeholder="Enter destination airport"
-          value={destination}
-          onChange={(e) => setDestination(e.target.value)}
-          required
-        />
+        <Popover open={destinationOpen} onOpenChange={setDestinationOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={destinationOpen}
+              className="w-full justify-between"
+            >
+              {destination ? indianAirports.find((airport) => airport.code === destination)?.city || "Select destination" : "Select destination"}
+              <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0">
+            <Command>
+              <CommandInput placeholder="Search airport..." />
+              <CommandEmpty>No airport found.</CommandEmpty>
+              <CommandGroup className="max-h-64 overflow-auto">
+                {indianAirports.map((airport) => (
+                  <CommandItem
+                    key={airport.code}
+                    onSelect={() => {
+                      setDestination(airport.code);
+                      setDestinationOpen(false);
+                    }}
+                  >
+                    <span className="font-medium">{airport.city}</span> - <span className="text-sm text-muted-foreground">{airport.code}, {airport.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Date Selection */}
