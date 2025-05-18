@@ -1,11 +1,11 @@
 
-import React, { useState, useEffect } from "react";
-import { Calendar as CalendarIcon } from "lucide-react";
+import React, { useState } from "react";
+import { Calendar } from "lucide-react";
 import { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -98,7 +98,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
               className="w-full justify-between"
             >
               {origin ? indianAirports.find((airport) => airport.code === origin)?.city || "Select origin" : "Select origin"}
-              <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              <Calendar className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[300px] p-0">
@@ -135,7 +135,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
               className="w-full justify-between"
             >
               {destination ? indianAirports.find((airport) => airport.code === destination)?.city || "Select destination" : "Select destination"}
-              <CalendarIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              <Calendar className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[300px] p-0">
@@ -167,17 +167,14 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
-              className={cn(
-                "w-[280px] justify-start text-left font-normal",
-                !date?.from && "text-muted-foreground"
-              )}
+              className="w-full justify-start text-left font-normal"
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {date?.from ? (
-                date.to ? (
-                  `${date.from?.toLocaleDateString()} - ${date.to?.toLocaleDateString()}`
+              <Calendar className="mr-2 h-4 w-4" />
+              {departureDate ? (
+                tripType === "round" && returnDate ? (
+                  `${departureDate.toLocaleDateString()} - ${returnDate.toLocaleDateString()}`
                 ) : (
-                  date.from?.toLocaleDateString()
+                  departureDate.toLocaleDateString()
                 )
               ) : (
                 <span>Pick a date</span>
@@ -186,25 +183,23 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="center">
             <div className="border rounded-md p-2">
-              <React.Fragment>
-                <Label>Departure Date</Label>
-                <Input
-                  type="date"
-                  value={departureDate ? departureDate.toISOString().split('T')[0] : ''}
-                  onChange={(e) => setDepartureDate(e.target.value ? new Date(e.target.value) : undefined)}
-                  className="mb-2"
-                />
-                {tripType === "round" && (
-                  <>
-                    <Label>Return Date</Label>
-                    <Input
-                      type="date"
-                      value={returnDate ? returnDate.toISOString().split('T')[0] : ''}
-                      onChange={(e) => setReturnDate(e.target.value ? new Date(e.target.value) : undefined)}
-                    />
-                  </>
-                )}
-              </React.Fragment>
+              <Label>Departure Date</Label>
+              <Input
+                type="date"
+                value={departureDate ? departureDate.toISOString().split('T')[0] : ''}
+                onChange={(e) => setDepartureDate(e.target.value ? new Date(e.target.value) : undefined)}
+                className="mb-2"
+              />
+              {tripType === "round" && (
+                <>
+                  <Label>Return Date</Label>
+                  <Input
+                    type="date"
+                    value={returnDate ? returnDate.toISOString().split('T')[0] : ''}
+                    onChange={(e) => setReturnDate(e.target.value ? new Date(e.target.value) : undefined)}
+                  />
+                </>
+              )}
             </div>
           </PopoverContent>
         </Popover>
@@ -214,7 +209,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       <div>
         <Label htmlFor="passengers">Passengers</Label>
         <Select value={passengers} onValueChange={setPassengers}>
-          <SelectTrigger className="w-[280px]">
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select number of passengers" />
           </SelectTrigger>
           <SelectContent>
@@ -231,7 +226,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch }) => {
       <div>
         <Label htmlFor="cabinClass">Cabin Class</Label>
         <Select value={cabinClass} onValueChange={setCabinClass}>
-          <SelectTrigger className="w-[280px]">
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select cabin class" />
           </SelectTrigger>
           <SelectContent>
