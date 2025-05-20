@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -67,7 +66,7 @@ const Index: React.FC = () => {
                 <CardDescription>Get insights on when to book</CardDescription>
               </CardHeader>
               <CardContent>
-                <PricePrediction />
+                <PricePrediction origin="DEL" destination="BOM" />
               </CardContent>
             </Card>
 

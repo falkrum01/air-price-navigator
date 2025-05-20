@@ -15,186 +15,220 @@ import BookingSummary from "@/components/BookingSummary";
 import { useToast } from "@/hooks/use-toast";
 import { useBookingContext } from "@/contexts/BookingContext";
 
-const STEPS = [
-  { id: 'flights', label: 'Flights', icon: Plane },
-  { id: 'accommodation', label: 'Accommodation', icon: Hotel },
-  { id: 'transport', label: 'Ground Transport', icon: Car },
-  { id: 'summary', label: 'Review & Confirm', icon: CheckCircle }
-];
-
 const TravelBooking: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<string>('flights');
+  const [activeTab, setActiveTab] = useState<string>('flights');
   const [accommodationType, setAccommodationType] = useState<'hotel' | 'hostel'>('hotel');
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { booking, hasFlightBooked } = useBookingContext();
+  const { booking, hasFlightBooked, hasAccommodationBooked, hasCabBooked, resetBooking } = useBookingContext();
 
-  const handleNext = () => {
-    const currentIndex = STEPS.findIndex(step => step.id === currentStep);
-    
-    if (currentStep === 'flights' && !hasFlightBooked) {
+  // Function to handle flight booking completion
+  const handleFlightBookingComplete = () => {
+    if (!booking.flight) {
       toast({
         title: "Flight selection required",
-        description: "Please select a flight before proceeding to accommodation",
+        description: "Please select a flight before proceeding",
         variant: "destructive",
       });
       return;
     }
     
-    if (currentIndex < STEPS.length - 1) {
-      setCurrentStep(STEPS[currentIndex + 1].id);
-      window.scrollTo(0, 0);
-    }
+    toast({
+      title: "Flight booked!",
+      description: "Your flight has been successfully booked",
+    });
+    
+    // Redirect to home page immediately after flight booking
+    navigate('/home');
   };
-
-  const handleBack = () => {
-    const currentIndex = STEPS.findIndex(step => step.id === currentStep);
-    if (currentIndex > 0) {
-      setCurrentStep(STEPS[currentIndex - 1].id);
-      window.scrollTo(0, 0);
+  
+  // Function to handle complete trip planning
+  const handleCompleteBooking = () => {
+    if (!booking.flight) {
+      toast({
+        title: "Flight selection required",
+        description: "Please select a flight for your trip",
+        variant: "destructive",
+      });
+      return;
     }
-  };
-
-  const handleSkip = () => {
-    const currentIndex = STEPS.findIndex(step => step.id === currentStep);
-    if (currentIndex < STEPS.length - 1) {
-      setCurrentStep(STEPS[currentIndex + 1].id);
-      window.scrollTo(0, 0);
-    }
+    
+    toast({
+      title: "Booking Confirmed",
+      description: "Your complete travel itinerary is being generated",
+    });
+    
+    // For complete trip booking, navigate to confirmation page
+    setTimeout(() => navigate("/booking-confirmation"), 1500);
   };
 
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-center mb-8">Complete Travel Booking</h1>
+        <h1 className="text-3xl font-bold text-center mb-6">Plan Your Trip</h1>
         
-        {/* Progress Indicator */}
-        <div className="mb-10">
-          <div className="flex justify-between items-center">
-            {STEPS.map((step, index) => {
-              const StepIcon = step.icon;
-              const isActive = step.id === currentStep;
-              const isPast = STEPS.findIndex(s => s.id === currentStep) > index;
-              
-              return (
-                <React.Fragment key={step.id}>
-                  {index > 0 && (
-                    <div className={`h-1 flex-1 ${isPast ? 'bg-airblue' : 'bg-gray-200'}`} />
-                  )}
-                  <div className="flex flex-col items-center">
-                    <div 
-                      className={`w-12 h-12 rounded-full flex items-center justify-center text-white
-                        ${isActive ? 'bg-airblue' : isPast ? 'bg-green-500' : 'bg-gray-300'}`}
-                    >
-                      <StepIcon size={20} />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="flights" className="flex items-center gap-2">
+              <Plane className="h-4 w-4" />
+              <span>Flights</span>
+            </TabsTrigger>
+            <TabsTrigger value="accommodation" className="flex items-center gap-2">
+              <Hotel className="h-4 w-4" />
+              <span>Accommodation</span>
+            </TabsTrigger>
+            <TabsTrigger value="transport" className="flex items-center gap-2">
+              <Car className="h-4 w-4" />
+              <span>Ground Transport</span>
+            </TabsTrigger>
+            <TabsTrigger value="summary" className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4" />
+              <span>Review & Confirm</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="mt-6">
+            <TabsContent value="flights" className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <h2 className="text-2xl font-semibold mb-4">Select Your Flight</h2>
+                  <FlightSearch />
+                  
+                  <div className="mt-6 flex justify-between">
+                    <div></div>
+                    <div className="flex space-x-3">
+                      <Button 
+                        onClick={() => setActiveTab('accommodation')} 
+                        variant="outline"
+                      >
+                        Continue to Trip Planning
+                      </Button>
+                      <Button 
+                        onClick={handleFlightBookingComplete}
+                        className="bg-airblue hover:bg-airblue/90"
+                      >
+                        Book Flight Only
+                      </Button>
                     </div>
-                    <span className={`mt-2 text-sm font-medium ${isActive ? 'text-airblue' : ''}`}>
-                      {step.label}
-                    </span>
                   </div>
-                </React.Fragment>
-              );
-            })}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="accommodation" className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <h2 className="text-2xl font-semibold mb-4">Choose Your Accommodation</h2>
+                  
+                  {!hasFlightBooked && (
+                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-md mb-4">
+                      <p className="text-amber-700">You haven't selected a flight yet. Consider booking a flight first.</p>
+                    </div>
+                  )}
+                  
+                  <Tabs
+                    defaultValue="hotel"
+                    value={accommodationType}
+                    onValueChange={(value) => setAccommodationType(value as 'hotel' | 'hostel')}
+                    className="w-full"
+                  >
+                    <TabsList className="grid w-full grid-cols-2 mb-6">
+                      <TabsTrigger value="hotel">Hotel</TabsTrigger>
+                      <TabsTrigger value="hostel">Hostel</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="hotel">
+                      <HotelSearch />
+                    </TabsContent>
+                    <TabsContent value="hostel">
+                      <HostelSearch />
+                    </TabsContent>
+                  </Tabs>
+                  
+                  <div className="mt-6 flex justify-between">
+                    <Button 
+                      onClick={() => setActiveTab('flights')} 
+                      variant="outline"
+                      className="flex items-center"
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" /> Back to Flights
+                    </Button>
+                    <Button 
+                      onClick={() => setActiveTab('transport')}
+                      className="bg-airblue hover:bg-airblue/90"
+                    >
+                      Continue <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="transport" className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <h2 className="text-2xl font-semibold mb-4">Book Ground Transportation</h2>
+                  
+                  {!hasFlightBooked && (
+                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-md mb-4">
+                      <p className="text-amber-700">You haven't selected a flight yet. Consider booking a flight first.</p>
+                    </div>
+                  )}
+                  
+                  <CabSearch />
+                  
+                  <div className="mt-6 flex justify-between">
+                    <Button 
+                      onClick={() => setActiveTab('accommodation')} 
+                      variant="outline"
+                      className="flex items-center"
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" /> Back to Accommodation
+                    </Button>
+                    <Button 
+                      onClick={() => setActiveTab('summary')}
+                      className="bg-airblue hover:bg-airblue/90"
+                    >
+                      Continue to Review <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="summary" className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <h2 className="text-2xl font-semibold mb-4">Review & Confirm Your Booking</h2>
+                  
+                  {!hasFlightBooked && (
+                    <div className="bg-red-50 border border-red-200 p-4 rounded-md mb-4">
+                      <p className="text-red-700">You need to select a flight before confirming your booking.</p>
+                    </div>
+                  )}
+                  
+                  <BookingSummary />
+                  
+                  <div className="mt-6 flex justify-between">
+                    <Button 
+                      onClick={() => setActiveTab('transport')} 
+                      variant="outline"
+                      className="flex items-center"
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" /> Back to Ground Transport
+                    </Button>
+                    <Button 
+                      onClick={handleCompleteBooking}
+                      className="bg-green-600 hover:bg-green-700"
+                      disabled={!hasFlightBooked}
+                    >
+                      Confirm Complete Booking
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
           </div>
-        </div>
-
-        {/* Step Content */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            {currentStep === 'flights' && (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-semibold">Select Your Flight</h2>
-                <FlightSearch />
-              </div>
-            )}
-
-            {currentStep === 'accommodation' && (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-semibold">Choose Your Accommodation</h2>
-                <Tabs
-                  defaultValue="hotel"
-                  value={accommodationType}
-                  onValueChange={(value) => setAccommodationType(value as 'hotel' | 'hostel')}
-                  className="w-full"
-                >
-                  <TabsList className="grid w-full grid-cols-2 mb-6">
-                    <TabsTrigger value="hotel">Hotel</TabsTrigger>
-                    <TabsTrigger value="hostel">Hostel</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="hotel">
-                    <HotelSearch />
-                  </TabsContent>
-                  <TabsContent value="hostel">
-                    <HostelSearch />
-                  </TabsContent>
-                </Tabs>
-              </div>
-            )}
-
-            {currentStep === 'transport' && (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-semibold">Book Ground Transportation</h2>
-                <CabSearch />
-              </div>
-            )}
-
-            {currentStep === 'summary' && (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-semibold">Review Your Booking</h2>
-                <BookingSummary />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between mt-6">
-          {currentStep !== 'flights' ? (
-            <Button 
-              onClick={handleBack}
-              variant="outline"
-              className="flex items-center"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-          ) : (
-            <div></div> // Empty div to maintain flex spacing
-          )}
-          
-          <div className="flex space-x-3">
-            {currentStep !== 'summary' && currentStep !== 'flights' && (
-              <Button 
-                onClick={handleSkip}
-                variant="ghost"
-              >
-                Skip this step
-              </Button>
-            )}
-            
-            {currentStep !== 'summary' ? (
-              <Button 
-                onClick={handleNext}
-                className="flex items-center bg-airblue hover:bg-airblue/90"
-              >
-                Next <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button 
-                onClick={() => {
-                  toast({
-                    title: "Booking Confirmed",
-                    description: "Your travel itinerary is being generated",
-                  });
-                  // In a real app, this would trigger PDF generation
-                  setTimeout(() => navigate("/booking-confirmation"), 1500);
-                }}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Confirm Booking
-              </Button>
-            )}
-          </div>
-        </div>
+        </Tabs>
       </div>
     </Layout>
   );
