@@ -19,6 +19,13 @@ dist-ssr
 .DS_Store
 *.suo
 *.ntvs*
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
 *.njsproj
 *.sln
 *.sw?
