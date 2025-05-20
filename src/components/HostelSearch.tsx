@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, MapPin, Star, Check, Calendar, Users, Wifi, Coffee, PlugZap } from "lucide-react";
+import { Loader2, MapPin, Star, Check, Calendar, Users, Wifi, Coffee, PlugZap, Map } from "lucide-react";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -13,6 +13,7 @@ import { Hostel } from "@/types/booking";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { indianAirports } from "@/data/indianAirports";
 
 const HostelSearch: React.FC = () => {
   const [location, setLocation] = useState<string>("");
@@ -26,13 +27,31 @@ const HostelSearch: React.FC = () => {
   const [hostels, setHostels] = useState<Hostel[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedHostel, setSelectedHostel] = useState<Hostel | null>(null);
+  const [isMapVisible, setIsMapVisible] = useState<boolean>(false);
   const { setHostelBooking, booking } = useBookingContext();
   const { toast } = useToast();
 
-  // If flight is booked, use the destination as default location
+  // Detect flight destination and set as default location
   useEffect(() => {
     if (booking.flight) {
-      setLocation(booking.flight.destination);
+      // Find the matching city name from the airport code
+      const destinationAirport = indianAirports.find(
+        airport => airport.code === booking.flight?.destination
+      );
+      
+      if (destinationAirport) {
+        setLocation(destinationAirport.city);
+      } else {
+        setLocation(booking.flight.destination);
+      }
+      
+      // Align dates with flight
+      if (booking.flight.departureDate) {
+        setCheckIn(new Date(booking.flight.departureDate));
+        // Set checkout to 3 days after arrival by default
+        const departureDate = new Date(booking.flight.departureDate);
+        setCheckOut(new Date(departureDate.setDate(departureDate.getDate() + 3)));
+      }
     }
   }, [booking.flight]);
   
@@ -123,10 +142,50 @@ const HostelSearch: React.FC = () => {
             lng: 77.2290,
           },
         },
+        {
+          id: "hs5",
+          name: "Urban Tribal",
+          location: location,
+          checkIn: checkIn,
+          checkOut: checkOut,
+          bedType: "Mixed Dormitory (4-Bed)",
+          guestCount: parseInt(guests),
+          pricePerNight: 850,
+          totalPrice: 850 * calculateNights(checkIn, checkOut),
+          amenities: ["Free WiFi", "Bicycle Rental", "Common Kitchen", "Laundry"],
+          image: "https://images.unsplash.com/photo-1555854877-5656899f5c70?ixlib=rb-4.0.3&auto=format&fit=crop&w=2069&q=80",
+          rating: 4.1,
+          coordinates: {
+            lat: 28.6229,
+            lng: 77.2315,
+          },
+        },
+        {
+          id: "hs6",
+          name: "Global Travelers Inn",
+          location: location,
+          checkIn: checkIn,
+          checkOut: checkOut,
+          bedType: "Private Twin Room",
+          guestCount: parseInt(guests),
+          pricePerNight: 1800,
+          totalPrice: 1800 * calculateNights(checkIn, checkOut),
+          amenities: ["Free WiFi", "En-suite Bathroom", "Free Breakfast", "24/7 Security"],
+          image: "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+          rating: 4.4,
+          coordinates: {
+            lat: 28.6429,
+            lng: 77.2310,
+          },
+        },
       ];
       
       setHostels(mockHostels);
       setLoading(false);
+      
+      if (mockHostels.length > 0) {
+        setIsMapVisible(true);
+      }
     }, 1500);
   };
   
@@ -149,6 +208,48 @@ const HostelSearch: React.FC = () => {
     if (amenity.includes("Breakfast")) return <Coffee className="h-3 w-3" />;
     if (amenity.includes("Power")) return <PlugZap className="h-3 w-3" />;
     return <Check className="h-3 w-3" />;
+  };
+  
+  // Mock map initialization - in a real app, this would use a mapping API
+  const renderHostelMap = () => {
+    if (!isMapVisible || hostels.length === 0) return null;
+    
+    return (
+      <div className="mt-8 border rounded-lg overflow-hidden">
+        <div className="bg-gray-50 p-3 flex items-center justify-between">
+          <h3 className="text-lg font-medium">Hostels in {location}</h3>
+          <Button variant="outline" size="sm" onClick={() => setIsMapVisible(false)} className="text-sm">
+            Hide Map
+          </Button>
+        </div>
+        <div className="h-80 relative bg-blue-50">
+          {/* Mock map with hostel markers */}
+          <div className="absolute inset-0 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center='+location+'&zoom=13&size=600x400&maptype=roadmap&key=NO_API_KEY_NEEDED_FOR_MOCK')] bg-cover bg-center opacity-50"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-lg">
+              <p className="font-medium">Interactive Map Placeholder</p>
+              <p className="text-sm text-gray-500">In a real app, this would be an interactive map showing hostel locations</p>
+            </div>
+          </div>
+          
+          {/* Simulate hostel locations on the map */}
+          {hostels.map((hostel, index) => (
+            <div 
+              key={hostel.id}
+              className={`absolute w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold 
+                ${selectedHostel?.id === hostel.id ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}
+              style={{ 
+                left: `${25 + (index * 10)}%`,
+                top: `${35 + (index * 8)}%`
+              }}
+              title={hostel.name}
+            >
+              {index + 1}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
   
   return (
@@ -234,12 +335,27 @@ const HostelSearch: React.FC = () => {
         </div>
       </div>
       
-      <Button 
-        onClick={handleSearch}
-        className="bg-airblue hover:bg-airblue/90"
-      >
-        Search Hostels
-      </Button>
+      <div className="flex gap-2">
+        <Button 
+          onClick={handleSearch}
+          className="bg-airblue hover:bg-airblue/90"
+        >
+          Search Hostels
+        </Button>
+        
+        <Button
+          variant="outline"
+          onClick={() => setIsMapVisible(!isMapVisible)}
+          className="flex items-center gap-1"
+          disabled={hostels.length === 0}
+        >
+          <Map className="h-4 w-4" />
+          {isMapVisible ? "Hide Map" : "Show Map"}
+        </Button>
+      </div>
+      
+      {/* Map View */}
+      {renderHostelMap()}
       
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12">

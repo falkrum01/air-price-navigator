@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, MapPin, Clock, ArrowRight } from "lucide-react";
+import { Loader2, MapPin, Clock, ArrowRight, Navigation, Car, Locate } from "lucide-react";
 import { useBookingContext } from "@/contexts/BookingContext";
 import { Cab } from "@/types/booking";
 import { useToast } from "@/hooks/use-toast";
@@ -11,24 +11,63 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { indianAirports } from "@/data/indianAirports";
 
 // Mock mapbox function since we're not actually loading the library
-const initializeMap = (container: HTMLDivElement, pickupCoords: [number, number], dropoffCoords?: [number, number]) => {
+const initializeMap = (container: HTMLDivElement, location: string, cabLocations: any[]) => {
   // In a real implementation, this would initialize an actual map
-  // For now, we'll just add a placeholder image to show where the map would be
   container.innerHTML = `
-    <div class="flex items-center justify-center h-full bg-gray-100 rounded">
-      <div class="text-center">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        </svg>
-        <p class="text-gray-500">Interactive Map</p>
-        <p class="text-sm text-gray-400">(Placeholder - would show real map in production)</p>
+    <div class="relative h-full bg-blue-50">
+      <div class="absolute inset-0 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=${location}&zoom=14&size=800x500&maptype=roadmap&key=NO_API_KEY_NEEDED_FOR_MOCK')] bg-cover bg-center opacity-70"></div>
+      
+      <div class="absolute inset-0 flex items-center justify-center">
+        <div class="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-lg">
+          <p class="font-medium">Interactive Map Placeholder</p>
+          <p class="text-sm text-gray-500">In a real app, this would show real-time cab locations</p>
+        </div>
+      </div>
+      
+      <!-- Pickup Location Marker -->
+      <div class="absolute w-8 h-8 transform -translate-x-1/2 -translate-y-1/2" style="left: 50%; top: 50%;">
+        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white animate-pulse">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a7 7 0 0 0-7 7c0 2 1 3.5 2.5 5s2.5 2.5 4.5 4.5 2 2 2 2a1 1 0 0 0 1.4 0s.5-.5 2-2 3-3 4.5-4.5S20 11 20 9a7 7 0 0 0-7-7Z"/>
+            <path d="M12 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>
+          </svg>
+        </div>
+        <div class="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded shadow text-xs font-medium">
+          You are here
+        </div>
       </div>
     </div>
   `;
+  
+  // Add mock cab locations
+  cabLocations.forEach((cab, index) => {
+    const cabMarker = document.createElement('div');
+    cabMarker.className = 'absolute w-6 h-6 transform -translate-x-1/2 -translate-y-1/2';
+    cabMarker.style.left = `${20 + (index * 15)}%`;
+    cabMarker.style.top = `${30 + (index * 10)}%`;
+    
+    cabMarker.innerHTML = `
+      <div class="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.6-1.3-.9-2.1-.9H5c-.8 0-1.5.5-1.8 1.3L2 13"/>
+          <path d="M19 17H5"/>
+          <path d="M15 17v3H9v-3"/>
+          <path d="M5 11v6"/>
+          <path d="M19 11v6"/>
+          <circle cx="7.5" cy="15.5" r="1.5"/>
+          <circle cx="16.5" cy="15.5" r="1.5"/>
+        </svg>
+      </div>
+    `;
+    
+    const mapContainer = container.querySelector('div');
+    if (mapContainer) {
+      mapContainer.appendChild(cabMarker);
+    }
+  });
 };
 
 const CabSearch: React.FC = () => {
@@ -41,31 +80,67 @@ const CabSearch: React.FC = () => {
   const [cabs, setCabs] = useState<Cab[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedCab, setSelectedCab] = useState<Cab | null>(null);
+  const [mockCabLocations, setMockCabLocations] = useState<any[]>([]);
   const { setCabBooking, booking } = useBookingContext();
   const { toast } = useToast();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   
-  // If flight is booked, use the destination as default dropoff location
+  // Auto-fill pickup and dropoff locations based on flight and accommodation
   useEffect(() => {
     if (booking.flight) {
-      // Use flight destination for dropoff
-      setDropoffLocation(`${booking.flight.destination} Airport`);
+      // Get destination city name from airport code
+      const destinationAirport = indianAirports.find(
+        airport => airport.code === booking.flight?.destination
+      );
       
-      // If hotel/hostel is booked, use it for pickup
+      const destinationName = destinationAirport ? 
+        `${destinationAirport.name}, ${destinationAirport.city}` : 
+        `${booking.flight.destination} Airport`;
+      
+      // If hotel/hostel is booked, set it as dropoff location and airport as pickup
       if (booking.hotel) {
-        setPickupLocation(booking.hotel.name);
+        setPickupLocation(destinationName);
+        setDropoffLocation(booking.hotel.name);
       } else if (booking.hostel) {
-        setPickupLocation(booking.hostel.name);
+        setPickupLocation(destinationName);
+        setDropoffLocation(booking.hostel.name);
+      } else {
+        // If no accommodation booked yet, just set airport as pickup
+        setPickupLocation(destinationName);
+      }
+      
+      // Set pickup time to one hour after flight arrival if available
+      if (booking.flight.arrivalTime) {
+        const arrivalTime = new Date(booking.flight.arrivalTime);
+        arrivalTime.setHours(arrivalTime.getHours() + 1); // Add 1 hour for luggage collection
+        setPickupTime(arrivalTime);
       }
     }
   }, [booking.flight, booking.hotel, booking.hostel]);
   
-  // Initialize the map when container is available
+  // Generate mock data for cab locations when component mounts
   useEffect(() => {
-    if (mapContainerRef.current) {
-      initializeMap(mapContainerRef.current, [28.6139, 77.2090]);
+    // Create 5-8 random cab locations for the map
+    const randomCount = Math.floor(Math.random() * 4) + 5;
+    const locations = [];
+    
+    for (let i = 0; i < randomCount; i++) {
+      locations.push({
+        id: `cab-${i}`,
+        type: ['Sedan', 'SUV', 'Premium', 'Economy'][Math.floor(Math.random() * 4)],
+        distance: `${Math.floor(Math.random() * 10) + 1} km away`
+      });
     }
+    
+    setMockCabLocations(locations);
   }, []);
+  
+  // Initialize the map when container is available and pickup location changes
+  useEffect(() => {
+    if (mapContainerRef.current && pickupLocation) {
+      initializeMap(mapContainerRef.current, pickupLocation, mockCabLocations);
+    }
+  }, [pickupLocation, mockCabLocations]);
   
   const handleSearch = () => {
     if (!pickupLocation || !dropoffLocation || !pickupTime) {
@@ -111,6 +186,8 @@ const CabSearch: React.FC = () => {
           price: 1200,
           estimatedTime: "35 min",
           distance: "15 km",
+          driverName: "Rajesh Kumar",
+          vehicleNumber: "DL 01 AB 1234",
           coordinates: {
             pickup: {
               lat: 28.6139,
@@ -131,6 +208,8 @@ const CabSearch: React.FC = () => {
           price: 1800,
           estimatedTime: "35 min",
           distance: "15 km",
+          driverName: "Amit Singh",
+          vehicleNumber: "DL 02 CD 5678",
           coordinates: {
             pickup: {
               lat: 28.6139,
@@ -151,6 +230,8 @@ const CabSearch: React.FC = () => {
           price: 2500,
           estimatedTime: "30 min",
           distance: "15 km",
+          driverName: "Vikram Mehta",
+          vehicleNumber: "DL 03 EF 9012",
           coordinates: {
             pickup: {
               lat: 28.6139,
@@ -270,11 +351,47 @@ const CabSearch: React.FC = () => {
               Search Cabs
             </Button>
           </div>
+
+          {/* Live Cab Availability Indicator */}
+          {pickupLocation && mockCabLocations.length > 0 && (
+            <Card className="mt-4">
+              <CardContent className="p-4">
+                <h4 className="font-medium mb-3 flex items-center">
+                  <Locate className="h-4 w-4 mr-2 text-green-600" />
+                  Available Cabs Nearby
+                </h4>
+                <div className="space-y-2">
+                  {mockCabLocations.slice(0, 4).map((cab, idx) => (
+                    <div key={cab.id} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center">
+                        <Car className="h-3 w-3 mr-2 text-gray-600" />
+                        <span>{cab.type}</span>
+                      </div>
+                      <span className="text-gray-600">{cab.distance}</span>
+                    </div>
+                  ))}
+                  {mockCabLocations.length > 4 && (
+                    <div className="text-xs text-center text-gray-500 italic pt-1">
+                      +{mockCabLocations.length - 4} more cabs available
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
         
         <div className="lg:col-span-2">
-          <div className="h-96 rounded-lg overflow-hidden border" ref={mapContainerRef}>
-            {/* Map will be rendered here */}
+          <div className="h-96 rounded-lg overflow-hidden border relative" ref={mapContainerRef}>
+            {!pickupLocation && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="text-center p-6">
+                  <Navigation className="h-10 w-10 mx-auto mb-3 text-gray-400" />
+                  <p className="text-lg font-medium">No Location Selected</p>
+                  <p className="text-sm text-muted-foreground mt-1">Enter a pickup location to see available cabs</p>
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="mt-6">
@@ -319,6 +436,12 @@ const CabSearch: React.FC = () => {
                             </div>
                             <div className="mx-2">•</div>
                             <span>{cab.distance}</span>
+                            {cab.driverName && (
+                              <>
+                                <div className="mx-2">•</div>
+                                <span>{cab.driverName}</span>
+                              </>
+                            )}
                           </div>
                           
                           <div className="flex items-center space-x-1 mt-2">

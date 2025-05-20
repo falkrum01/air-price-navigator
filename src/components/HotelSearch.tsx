@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, MapPin, Star, Check, Calendar, Users } from "lucide-react";
+import { Loader2, MapPin, Star, Check, Calendar, Users, Map } from "lucide-react";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -13,6 +13,7 @@ import { Hotel } from "@/types/booking";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { indianAirports } from "@/data/indianAirports";
 
 const HotelSearch: React.FC = () => {
   const [location, setLocation] = useState<string>("");
@@ -27,13 +28,31 @@ const HotelSearch: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [maxPrice, setMaxPrice] = useState<number>(20000);
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
+  const [isMapVisible, setIsMapVisible] = useState<boolean>(false);
   const { setHotelBooking, booking } = useBookingContext();
   const { toast } = useToast();
   
-  // If flight is booked, use the destination as default location
+  // Detect flight destination and set as default location
   useEffect(() => {
     if (booking.flight) {
-      setLocation(booking.flight.destination);
+      // Find the matching city name from the airport code
+      const destinationAirport = indianAirports.find(
+        airport => airport.code === booking.flight?.destination
+      );
+      
+      if (destinationAirport) {
+        setLocation(destinationAirport.city);
+      } else {
+        setLocation(booking.flight.destination);
+      }
+      
+      // Align dates with flight
+      if (booking.flight.departureDate) {
+        setCheckIn(new Date(booking.flight.departureDate));
+        // Set checkout to 3 days after arrival by default
+        const departureDate = new Date(booking.flight.departureDate);
+        setCheckOut(new Date(departureDate.setDate(departureDate.getDate() + 3)));
+      }
     }
   }, [booking.flight]);
   
@@ -124,10 +143,50 @@ const HotelSearch: React.FC = () => {
             lng: 77.2588,
           },
         },
+        {
+          id: "h5",
+          name: "The Oberoi",
+          location: location,
+          checkIn: checkIn,
+          checkOut: checkOut,
+          roomType: "Premier Room",
+          guestCount: parseInt(guests),
+          pricePerNight: 14000,
+          totalPrice: 14000 * calculateNights(checkIn, checkOut),
+          amenities: ["Free WiFi", "Pool", "Spa", "Fine Dining", "24-hour Butler"],
+          image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+          rating: 4.9,
+          coordinates: {
+            lat: 28.5955,
+            lng: 77.2210,
+          },
+        },
+        {
+          id: "h6",
+          name: "Radisson Blu",
+          location: location,
+          checkIn: checkIn,
+          checkOut: checkOut,
+          roomType: "Business Class Room",
+          guestCount: parseInt(guests),
+          pricePerNight: 9000,
+          totalPrice: 9000 * calculateNights(checkIn, checkOut),
+          amenities: ["Free WiFi", "Breakfast", "Business Center", "Fitness Center"],
+          image: "https://images.unsplash.com/photo-1606402179428-a57976d71fa4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+          rating: 4.3,
+          coordinates: {
+            lat: 28.5635,
+            lng: 77.2144,
+          },
+        },
       ];
       
       setHotels(mockHotels);
       setLoading(false);
+      
+      if (mockHotels.length > 0) {
+        setIsMapVisible(true);
+      }
     }, 1500);
   };
   
@@ -143,6 +202,48 @@ const HotelSearch: React.FC = () => {
       title: "Hotel selected",
       description: `${hotel.name} has been added to your booking.`,
     });
+  };
+
+  // Mock map initialization - in a real app, this would use a mapping API
+  const renderHotelMap = () => {
+    if (!isMapVisible || hotels.length === 0) return null;
+    
+    return (
+      <div className="mt-8 border rounded-lg overflow-hidden">
+        <div className="bg-gray-50 p-3 flex items-center justify-between">
+          <h3 className="text-lg font-medium">Hotels in {location}</h3>
+          <Button variant="outline" size="sm" onClick={() => setIsMapVisible(false)} className="text-sm">
+            Hide Map
+          </Button>
+        </div>
+        <div className="h-80 relative bg-blue-50">
+          {/* Mock map with hotel markers */}
+          <div className="absolute inset-0 bg-[url('https://maps.googleapis.com/maps/api/staticmap?center='+location+'&zoom=13&size=600x400&maptype=roadmap&key=NO_API_KEY_NEEDED_FOR_MOCK')] bg-cover bg-center opacity-50"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-lg">
+              <p className="font-medium">Interactive Map Placeholder</p>
+              <p className="text-sm text-gray-500">In a real app, this would be an interactive map showing hotel locations</p>
+            </div>
+          </div>
+          
+          {/* Simulate hotel locations on the map */}
+          {hotels.map((hotel, index) => (
+            <div 
+              key={hotel.id}
+              className={`absolute w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold 
+                ${selectedHotel?.id === hotel.id ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}
+              style={{ 
+                left: `${20 + (index * 10)}%`,
+                top: `${30 + (index * 8)}%`
+              }}
+              title={hotel.name}
+            >
+              {index + 1}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
   
   return (
@@ -244,13 +345,28 @@ const HotelSearch: React.FC = () => {
           </div>
         </div>
         
-        <Button 
-          onClick={handleSearch}
-          className="bg-airblue hover:bg-airblue/90 mt-4 md:mt-6"
-        >
-          Search Hotels
-        </Button>
+        <div className="flex gap-2 mt-4 md:mt-6">
+          <Button 
+            onClick={handleSearch}
+            className="bg-airblue hover:bg-airblue/90"
+          >
+            Search Hotels
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={() => setIsMapVisible(!isMapVisible)}
+            className="flex items-center gap-1"
+            disabled={hotels.length === 0}
+          >
+            <Map className="h-4 w-4" />
+            {isMapVisible ? "Hide Map" : "Show Map"}
+          </Button>
+        </div>
       </div>
+      
+      {/* Map View */}
+      {renderHotelMap()}
       
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12">

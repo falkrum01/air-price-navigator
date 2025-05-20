@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,35 @@ const TravelBooking: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { booking, hasFlightBooked, hasAccommodationBooked, hasCabBooked, resetBooking } = useBookingContext();
+
+  // Automatically move to the next tab when a selection is made
+  useEffect(() => {
+    if (hasFlightBooked && activeTab === 'flights') {
+      setTimeout(() => {
+        toast({
+          title: "Flight selected!",
+          description: "Now let's choose your accommodation",
+        });
+        setActiveTab('accommodation');
+      }, 1000);
+    } else if (hasAccommodationBooked && activeTab === 'accommodation') {
+      setTimeout(() => {
+        toast({
+          title: "Accommodation selected!",
+          description: "Now let's arrange your ground transport",
+        });
+        setActiveTab('transport');
+      }, 1000);
+    } else if (hasCabBooked && activeTab === 'transport') {
+      setTimeout(() => {
+        toast({
+          title: "Transport selected!",
+          description: "Please review your complete itinerary",
+        });
+        setActiveTab('summary');
+      }, 1000);
+    }
+  }, [hasFlightBooked, hasAccommodationBooked, hasCabBooked, activeTab, toast]);
 
   // Function to handle flight booking completion
   const handleFlightBookingComplete = () => {
@@ -72,14 +101,17 @@ const TravelBooking: React.FC = () => {
             <TabsTrigger value="flights" className="flex items-center gap-2">
               <Plane className="h-4 w-4" />
               <span>Flights</span>
+              {hasFlightBooked && <CheckCircle className="h-3 w-3 ml-1 text-green-500" />}
             </TabsTrigger>
             <TabsTrigger value="accommodation" className="flex items-center gap-2">
               <Hotel className="h-4 w-4" />
               <span>Accommodation</span>
+              {hasAccommodationBooked && <CheckCircle className="h-3 w-3 ml-1 text-green-500" />}
             </TabsTrigger>
             <TabsTrigger value="transport" className="flex items-center gap-2">
               <Car className="h-4 w-4" />
               <span>Ground Transport</span>
+              {hasCabBooked && <CheckCircle className="h-3 w-3 ml-1 text-green-500" />}
             </TabsTrigger>
             <TabsTrigger value="summary" className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4" />
@@ -100,8 +132,10 @@ const TravelBooking: React.FC = () => {
                       <Button 
                         onClick={() => setActiveTab('accommodation')} 
                         variant="outline"
+                        disabled={!hasFlightBooked}
                       >
-                        Continue to Trip Planning
+                        Continue to Accommodation
+                        <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                       <Button 
                         onClick={handleFlightBookingComplete}
@@ -155,8 +189,9 @@ const TravelBooking: React.FC = () => {
                     <Button 
                       onClick={() => setActiveTab('transport')}
                       className="bg-airblue hover:bg-airblue/90"
+                      disabled={!hasAccommodationBooked}
                     >
-                      Continue <ArrowRight className="ml-2 h-4 w-4" />
+                      Continue to Transport <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>
@@ -187,6 +222,7 @@ const TravelBooking: React.FC = () => {
                     <Button 
                       onClick={() => setActiveTab('summary')}
                       className="bg-airblue hover:bg-airblue/90"
+                      disabled={!hasCabBooked}
                     >
                       Continue to Review <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
