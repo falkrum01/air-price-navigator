@@ -4,10 +4,14 @@ import SearchForm from "./SearchForm";
 import PriceComparison from "./PriceComparison";
 import { SearchParams } from "@/types/flight";
 import { toast } from "@/hooks/use-toast";
+import { Flight } from "@/types/flight";
+import FlightCard from "./FlightCard";
+import { useBookingContext } from "@/contexts/BookingContext";
 
 const FlightSearch: React.FC = () => {
   const [searchParams, setSearchParams] = useState<SearchParams | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const { setFlightBooking } = useBookingContext();
 
   const handleSearch = (params: SearchParams) => {
     if (!params.origin || !params.destination) {
@@ -36,6 +40,35 @@ const FlightSearch: React.FC = () => {
     // The loading state will be handled by the child component
   };
 
+  const handleBookFlight = (flightDetails: Partial<Flight>) => {
+    // Create a complete Flight object
+    const flight: Flight = {
+      id: flightDetails.id || `flight-${Date.now()}`,
+      airline: flightDetails.airline || "",
+      airlineLogo: flightDetails.airlineLogo || "",
+      origin: flightDetails.origin || "",
+      destination: flightDetails.destination || "",
+      departureDate: flightDetails.departureDate || new Date().toISOString().split('T')[0],
+      departureTime: flightDetails.departureTime || "",
+      arrivalTime: flightDetails.arrivalTime || "",
+      duration: flightDetails.duration || "",
+      stops: flightDetails.stops || 0,
+      price: flightDetails.price || 0,
+      website: flightDetails.website || "",
+      websiteLogo: flightDetails.websiteLogo || "",
+      flightNumber: flightDetails.flightNumber,
+      cabinClass: flightDetails.cabinClass,
+      passengers: flightDetails.passengers || 1
+    };
+
+    setFlightBooking(flight);
+    
+    toast({
+      title: "Flight Selected",
+      description: `${flight.airline} flight has been added to your trip planning`,
+    });
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 gap-6">
@@ -54,6 +87,7 @@ const FlightSearch: React.FC = () => {
                   returnDate={searchParams.returnDate}
                   passengers={searchParams.passengers}
                   cabinClass={searchParams.cabinClass}
+                  onSelectFlight={handleBookFlight}
                 />
               </div>
             </div>

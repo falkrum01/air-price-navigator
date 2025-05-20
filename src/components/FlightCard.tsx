@@ -46,8 +46,8 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBook }) => {
     maximumFractionDigits: 0,
   }).format(price);
 
-  // Handle booking button click
-  const handleBook = () => {
+  // Handle flight selection
+  const handleSelect = () => {
     if (!user) {
       // If user is not logged in, redirect to auth page
       toast({
@@ -59,7 +59,7 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBook }) => {
       return;
     }
     
-    // If user is logged in, proceed with booking
+    // If user is logged in, select this flight
     onBook({
       airline,
       flightNumber: flight.id || `${airline}-${Math.floor(Math.random() * 1000)}`,
@@ -144,14 +144,14 @@ const FlightCard: React.FC<FlightCardProps> = ({ flight, onBook }) => {
           </div>
         </div>
 
-        {/* Price and booking button */}
+        {/* Price and select button */}
         <div className="flex flex-col items-center justify-center">
           <p className="text-2xl font-bold text-airblue mb-2">{formattedPrice}</p>
           <Button 
             className="w-full bg-airorange hover:bg-airorange/90"
-            onClick={handleBook}
+            onClick={handleSelect}
           >
-            Book
+            Select
           </Button>
         </div>
       </div>
