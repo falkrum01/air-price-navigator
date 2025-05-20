@@ -14,6 +14,15 @@ import { format } from "date-fns";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+    lastAutoTable: {
+      finalY: number;
+    };
+  }
+}
+
 interface PaymentFormProps {
   flightDetails: {
     airline: string;
@@ -61,8 +70,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
       // Generate a random transaction ID
       const transactionId = `TXN${Math.floor(Math.random() * 1000000000).toString().padStart(9, '0')}`;
       
-      // Save the booking to the database
-      const { error } = await supabase.from('bookings').insert({
+      // Calculate amounts
+      const baseFare = flightDetails.price * flightDetails.passengers;
+      const taxes = Math.round(baseFare * 0.18);
+      const finalAmount = baseFare + taxes;
+      
+      // Prepare booking data
+      const bookingData = {
         user_id: user?.id,
         origin: flightDetails.origin,
         destination: flightDetails.destination,
@@ -74,18 +88,34 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
         payment_method: paymentMethod,
         transaction_id: transactionId,
         booking_status: 'confirmed'
-      });
+      };
       
-      if (error) throw error;
+      // Add cabin_class and passenger_count if they exist in the schema
+      if (flightDetails.cabinClass) {
+        (bookingData as any).cabin_class = flightDetails.cabinClass;
+      }
       
+      if (flightDetails.passengers) {
+        (bookingData as any).passenger_count = flightDetails.passengers;
+      }
+      
+      // Save the booking to the database
+      const { error } = await supabase.from('bookings').insert(bookingData);
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(`Payment failed: ${error.message}`);
+      }
+      
+      // Generate PDF ticket
+      generatePDF(transactionId);
+      
+      // Show success message
       toast({
         title: "Payment Successful",
         description: "Your flight has been booked successfully! Check your email for details.",
         variant: "default",
       });
-      
-      // Generate PDF ticket
-      generatePDF(transactionId);
       
       // Simulate sending email
       sendConfirmationEmail(transactionId);
@@ -166,100 +196,119 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
   };
 
   const generatePDF = (transactionId: string) => {
-    const doc = new jsPDF() as any;
+    const doc = new jsPDF();
+    const pnr = `PNR${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
+    const ticketNumber = `TK${Math.floor(Math.random() * 1000000000).toString().padStart(10, '0')}`;
+    const gate = String.fromCharCode(65 + Math.floor(Math.random() * 10)) + (Math.floor(Math.random() * 20) + 1);
+    const seat = (Math.floor(Math.random() * 30) + 1) + String.fromCharCode(65 + Math.floor(Math.random() * 6));
+    const terminal = Math.floor(Math.random() * 3) + 1;
+    const baggageAllowance = flightDetails.cabinClass === 'economy' ? '15kg' : flightDetails.cabinClass === 'business' ? '30kg' : '40kg';
     
-    // Add logo and header
+    // Add Airline Header
     doc.setFillColor(10, 61, 98);
-    doc.rect(0, 0, 210, 30, 'F');
+    doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
-    doc.text("SkyPredict", 20, 20);
+    doc.text(flightDetails.airline, 20, 25);
     doc.setFontSize(12);
-    doc.text("E-Ticket / Booking Confirmation", 120, 20);
+    doc.text("E-TICKET / ITINERARY / RECEIPT", 120, 20);
+    doc.text("BOARDING PASS", 120, 30);
     
-    // Booking details
+    // Add PNR and Ticket Number
+    doc.setFontSize(10);
+    doc.text(`PNR: ${pnr}`, 20, 50);
+    doc.text(`E-Ticket Number: ${ticketNumber}`, 20, 57);
+    doc.text(`Booking Ref: ${transactionId}`, 20, 64);
+    doc.text(`Status: CONFIRMED`, 120, 50);
+    doc.text(`Issued On: ${format(new Date(), "dd MMM yyyy")}`, 120, 57);
+    
+    // Passenger Information
+    doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(18);
-    doc.text("Booking Confirmation", 20, 40);
+    doc.setFillColor(230, 230, 230);
+    doc.rect(20, 70, 170, 10, 'F');
+    doc.text("PASSENGER INFORMATION", 22, 77);
     
-    doc.setFontSize(11);
-    doc.text(`Booking Reference: ${transactionId}`, 20, 50);
-    doc.text(`Booking Date: ${format(new Date(), "dd MMM yyyy")}`, 20, 57);
+    doc.setFontSize(10);
+    doc.text(`Passenger: ${user?.user_metadata?.full_name || 'Passenger Name'}`, 22, 90);
+    doc.text(`Class: ${flightDetails.cabinClass.toUpperCase()}`, 22, 97);
+    doc.text(`Seat: ${seat}`, 120, 90);
+    doc.text(`Baggage: ${baggageAllowance}`, 120, 97);
     
-    // Passenger info
-    doc.setFontSize(14);
-    doc.text("Passenger Information", 20, 70);
+    // Flight Details
+    doc.setFontSize(12);
+    doc.setFillColor(230, 230, 230);
+    doc.rect(20, 105, 170, 10, 'F');
+    doc.text("FLIGHT DETAILS", 22, 112);
     
-    doc.setFontSize(11);
-    doc.text(`Passenger Name: ${user?.user_metadata?.full_name || "Passenger"}`, 20, 80);
-    doc.text(`Number of Passengers: ${flightDetails.passengers}`, 20, 87);
+    // Flight segment
+    doc.setFontSize(10);
+    doc.text(`${flightDetails.origin} → ${flightDetails.destination}`, 22, 125);
+    doc.text(`Flight: ${flightDetails.airline} ${flightDetails.flightNumber}`, 22, 132);
+    doc.text(`Date: ${format(new Date(flightDetails.departureDate), "dd MMM yyyy")}`, 22, 139);
+    doc.text(`Departure: ${flightDetails.departureTime || '--:--'}`, 22, 146);
+    doc.text(`Arrival: ${flightDetails.arrivalTime || '--:--'}`, 22, 153);
+    doc.text(`Duration: ${flightDetails.duration || '--h --m'}`, 100, 125);
+    doc.text(`Gate: ${gate}`, 100, 132);
+    doc.text(`Terminal: ${terminal}`, 100, 139);
     
-    // Flight details table
-    doc.setFontSize(14);
-    doc.text("Flight Details", 20, 100);
+    // Payment Information
+    doc.setFontSize(12);
+    doc.setFillColor(230, 230, 230);
+    doc.rect(20, 160, 170, 10, 'F');
+    doc.text("PAYMENT DETAILS", 22, 167);
     
-    const tableData = [
-      ['Airline', 'Flight', 'From', 'To', 'Date', 'Class'],
-      [
-        flightDetails.airline,
-        flightDetails.flightNumber,
-        flightDetails.origin,
-        flightDetails.destination,
-        format(new Date(flightDetails.departureDate), "dd MMM yyyy"),
-        flightDetails.cabinClass.charAt(0).toUpperCase() + flightDetails.cabinClass.slice(1)
-      ]
-    ];
+    const baseFare = flightDetails.price * flightDetails.passengers;
+    const taxes = Math.round(baseFare * 0.18);
+    const finalAmount = baseFare + taxes;
     
-    if (flightDetails.returnDate) {
-      tableData.push([
-        flightDetails.airline,
-        flightDetails.flightNumber + 'R',
-        flightDetails.destination,
-        flightDetails.origin,
-        format(new Date(flightDetails.returnDate), "dd MMM yyyy"),
-        flightDetails.cabinClass.charAt(0).toUpperCase() + flightDetails.cabinClass.slice(1)
-      ]);
+    doc.setFontSize(10);
+    doc.text(`Base Fare (${flightDetails.passengers} x ₹${flightDetails.price.toLocaleString()}):`, 22, 180);
+    doc.text(`₹${baseFare.toLocaleString()}`, 160, 180, { align: 'right' } as any);
+    
+    doc.text(`Taxes & Fees:`, 22, 187);
+    doc.text(`₹${taxes.toLocaleString()}`, 160, 187, { align: 'right' } as any);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Amount:`, 22, 197);
+    doc.text(`₹${finalAmount.toLocaleString()}`, 160, 197, { align: 'right' } as any);
+    doc.setFont('helvetica', 'normal');
+    
+    // Barcode and Important Information
+    doc.setFontSize(10);
+    doc.text(`Payment Method: ${paymentMethod.toUpperCase()}`, 22, 210);
+    doc.text(`Status: PAID`, 22, 217);
+    
+    // Add a simple barcode (as a placeholder)
+    doc.setFillColor(0, 0, 0);
+    for (let i = 0; i < 20; i++) {
+      const barHeight = 5 + Math.random() * 5;
+      doc.rect(100 + (i * 3), 215, 2, barHeight, 'F');
     }
     
-    doc.autoTable({
-      startY: 105,
-      head: [tableData[0]],
-      body: tableData.slice(1),
-      theme: 'striped',
-      headStyles: { fillColor: [10, 61, 98] }
-    });
+    // Add important notes
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text("IMPORTANT: Please bring this e-ticket and a valid photo ID to the airport.", 22, 235);
+    doc.text(`Check-in opens 48 hours before departure and closes 60 minutes before departure.`, 22, 240);
+    doc.text(`For assistance, contact SkyPredict Support at support@skypredict.com or call +91 1234567890.`, 22, 245);
     
-    // Payment information
-    const yPos = doc.lastAutoTable.finalY + 15;
+    // Add footer
+    doc.setFontSize(7);
+    doc.text(" 2025 SkyPredict. All rights reserved.", 105, 290, { align: 'center' } as any);
     
-    doc.setFontSize(14);
-    doc.text("Payment Information", 20, yPos);
-    
-    doc.setFontSize(11);
-    doc.text(`Base Fare: ₹${totalAmount.toLocaleString('en-IN')}`, 20, yPos + 10);
-    doc.text(`Taxes & Fees: ₹${taxes.toLocaleString('en-IN')}`, 20, yPos + 17);
-    doc.text(`Total Amount: ₹${finalAmount.toLocaleString('en-IN')}`, 20, yPos + 24);
-    doc.text(`Payment Method: ${paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)}`, 20, yPos + 31);
-    doc.text(`Transaction ID: ${transactionId}`, 20, yPos + 38);
-    
-    // Footer
-    doc.setFontSize(10);
-    doc.text("This is a computer-generated document and does not require a physical signature.", 20, yPos + 50);
-    doc.text("© SkyPredict. All rights reserved.", 20, yPos + 57);
-    
-    // Save the PDF
-    doc.save(`SkyPredict_Ticket_${transactionId}.pdf`);
+    // Save the PDF with a meaningful name
+    doc.save(`SkyPredict_Ticket_${pnr}.pdf`);
   };
 
   const sendConfirmationEmail = (transactionId: string) => {
     // In a real application, this would call an API endpoint to send an email
-    // Here we're just simulating this with a toast message
     console.log("Sending confirmation email for booking:", transactionId);
     
     setTimeout(() => {
       toast({
-        title: "Email Sent",
-        description: `A booking confirmation has been sent to ${user?.email}`,
+        title: "Confirmation Email Sent",
+        description: `A confirmation email has been sent to ${user?.email || 'your email address'}`,
       });
     }, 1000);
   };

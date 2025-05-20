@@ -7,13 +7,13 @@ import { Linkedin, User } from "lucide-react";
 const Team = () => {
   const teamMembers = [
     {
-      name: "Ashwin",
+      name: "Ashwin Deepak Reddy",
       description: "Full Stack Developer",
       image: "https://res.cloudinary.com/dbt3gghme/image/upload/v1747567818/Professional_Black_Blazer_with_BG_utbbrh.jpg",
       linkedin: "https://www.linkedin.com/in/ashwin-reddy-1580/"
     },
     {
-      name: "Karthik",
+      name: "Karthik Bandari",
       description: "UI/UX Developer",
       image: "https://res.cloudinary.com/dbt3gghme/image/upload/v1747567767/PHOTO-2025-05-18-16-23-23_qramt9.jpg",
       linkedin: "https://www.linkedin.com/in/bkarthik5105/"

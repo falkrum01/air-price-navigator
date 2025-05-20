@@ -239,7 +239,7 @@ const Layout = ({ children }: LayoutProps) => {
                     rel="noopener noreferrer"
                     className="text-muted-foreground hover:text-foreground hover:underline flex items-center"
                   >
-                    <span className="mr-1">🎨</span> Karthik (UI/UX Developer)
+                    <span className="mr-1">🎨</span> Karthik Bandari (UI/UX Developer)
                   </a>
                 </li>
                 <li>
@@ -249,7 +249,7 @@ const Layout = ({ children }: LayoutProps) => {
                     rel="noopener noreferrer"
                     className="text-muted-foreground hover:text-foreground hover:underline flex items-center"
                   >
-                    <span className="mr-1">💻</span> Ashwin (Full Stack)
+                    <span className="mr-1">💻</span> Ashwin Deepak Reddy (Full Stack)
                   </a>
                 </li>
               </ul>
