@@ -9,7 +9,12 @@ import {
   Home, 
   Car,
   CreditCard,
-  User
+  User,
+  TrendingUp,
+  LineChart,
+  Building,
+  Activity,
+  Compass
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -26,7 +31,12 @@ const Header: React.FC = () => {
     { 
       name: 'Flight Tracker', 
       path: '/flight-tracker', 
-      icon: <MapPin className="h-5 w-5" />
+      icon: <Activity className="h-5 w-5" />
+    },
+    { 
+      name: 'Price Trends', 
+      path: '/price-trends', 
+      icon: <LineChart className="h-5 w-5" />
     },
     { 
       name: 'Hotels', 
@@ -44,6 +54,11 @@ const Header: React.FC = () => {
       icon: <Car className="h-5 w-5" />
     },
     { 
+      name: 'Airports', 
+      path: '/airports', 
+      icon: <Building className="h-5 w-5" />
+    },
+    { 
       name: 'Team', 
       path: '/team', 
       icon: <Users className="h-5 w-5" />
@@ -59,7 +74,7 @@ const Header: React.FC = () => {
     <header className="bg-white shadow-sm py-3 px-4 mb-6">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link to="/home" className="flex items-center gap-2">
-          <Plane className="h-6 w-6 text-blue-600" />
+          <Plane className="h-6 w-6 text-airblue" />
           <span className="text-xl font-bold text-gray-900 hidden sm:inline">AirPriceNavigator</span>
         </Link>
         

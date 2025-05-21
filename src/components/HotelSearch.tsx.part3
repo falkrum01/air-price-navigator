@@ -1,0 +1,516 @@
+const HotelSearch: React.FC = () => {
+  const [location, setLocation] = useState(defaultCity);
+  const [checkin, setCheckin] = useState<Date>(new Date());
+  const [checkout, setCheckout] = useState<Date>(new Date(new Date().setDate(new Date().getDate() + 2)));
+  const [guests, setGuests] = useState(2);
+  const [rooms, setRooms] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
+  const [hotelBooking, setHotelBooking] = useState<Hotel | null>(null);
+  const [isMapVisible, setIsMapVisible] = useState(true);
+  const [activeTab, setActiveTab] = useState("hotels");
+  const { toast } = useToast();
+
+  // Function to search for hotels
+  const handleSearch = useCallback(() => {
+    if (!location) {
+      toast({
+        title: "Please enter a location",
+        description: "You need to specify a location to search for hotels",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    
+    // Determine which city's hotels to show
+    const cityKeys = Object.keys(cityData);
+    let cityToUse = defaultCity;
+    
+    // Find matching city from the input
+    for (const city of cityKeys) {
+      if (location.toLowerCase().includes(city.toLowerCase())) {
+        cityToUse = city;
+        break;
+      }
+    }
+    
+    // Get hotels for the selected city
+    const hotelsForCity = cityHotels[cityToUse] || cityHotels[defaultCity];
+    
+    // Simulate API delay
+    setTimeout(() => {
+      setHotels(hotelsForCity);
+      setSelectedHotel(null);
+      setHotelBooking(null);
+      setLoading(false);
+      
+      toast({
+        title: `Showing hotels in ${cityToUse}`,
+        description: `${hotelsForCity.length} hotels found for your dates`,
+      });
+    }, 1000);
+  }, [location, toast]);
+
+  // Load default city hotels on initial load
+  useEffect(() => {
+    setLoading(true);
+    
+    // Simulate API delay
+    setTimeout(() => {
+      const defaultHotels = cityHotels[defaultCity] || [];
+      setHotels(defaultHotels);
+      setLoading(false);
+    }, 500);
+  }, []);
+
+  // Function to handle hotel selection
+  const handleHotelSelect = useCallback((hotel: Hotel) => {
+    setSelectedHotel(hotel);
+    setHotelBooking(hotel);
+    
+    toast({
+      title: "Hotel Selected",
+      description: `${hotel.name} has been selected. Price: ₹${hotel.pricePerNight}/night`,
+    });
+  }, [toast]);
+
+  // Calculate total price for booking
+  const calculateTotalPrice = useCallback(() => {
+    if (!hotelBooking) return 0;
+    
+    const nights = Math.max(1, Math.round((checkout.getTime() - checkin.getTime()) / (1000 * 60 * 60 * 24)));
+    return hotelBooking.pricePerNight * nights;
+  }, [hotelBooking, checkin, checkout]);
+
+  // Get the center coordinates for the map
+  const getMapCenter = useCallback(() => {
+    // If a hotel is selected, center on it
+    if (selectedHotel) {
+      return selectedHotel.coordinates;
+    }
+    
+    // Otherwise, use the city center
+    const cityKeys = Object.keys(cityData);
+    for (const city of cityKeys) {
+      if (location.toLowerCase().includes(city.toLowerCase())) {
+        return cityData[city].center;
+      }
+    }
+    
+    // Default to the default city center
+    return cityData[defaultCity].center;
+  }, [selectedHotel, location]);
+
+  // Determine which city we're displaying
+  const getCurrentCity = useCallback(() => {
+    const cityKeys = Object.keys(cityData);
+    for (const city of cityKeys) {
+      if (location.toLowerCase().includes(city.toLowerCase())) {
+        return city;
+      }
+    }
+    return defaultCity;
+  }, [location]);
+
+  return (
+    <div className="container mx-auto p-4">
+      <Tabs defaultValue="hotels" className="mb-6" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="hotels">Hotels & Hostels</TabsTrigger>
+          <TabsTrigger value="trends">Price Trends</TabsTrigger>
+        </TabsList>
+        <TabsContent value="hotels" className="pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Location</label>
+              <div className="flex gap-2">
+                <Select value={location} onValueChange={setLocation} className="flex-grow">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select city" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(cityData).map((city) => (
+                      <SelectItem key={city} value={city}>
+                        <div className="flex items-center">
+                          <Building className="mr-2 h-4 w-4" />
+                          <span>{city}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Check-in</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !checkin && "text-muted-foreground"
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {checkin ? format(checkin, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <CalendarComponent
+                    mode="single"
+                    selected={checkin}
+                    onSelect={(date) => date && setCheckin(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Check-out</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !checkout && "text-muted-foreground"
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {checkout ? format(checkout, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <CalendarComponent
+                    mode="single"
+                    selected={checkout}
+                    onSelect={(date) => date && setCheckout(date)}
+                    initialFocus
+                    disabled={(date) => date < checkin}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Guests & Rooms</label>
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={guests.toString()} onValueChange={(value) => setGuests(parseInt(value))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Guests" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5, 6].map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num} {num === 1 ? "Guest" : "Guests"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select value={rooms.toString()} onValueChange={(value) => setRooms(parseInt(value))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Rooms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4].map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num} {num === 1 ? "Room" : "Rooms"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-4 flex justify-between items-center">
+            <Button 
+              onClick={handleSearch} 
+              className="bg-airblue hover:bg-airblue/90"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Hotel className="mr-2 h-4 w-4" />
+                  Search Hotels
+                </>
+              )}
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsMapVisible(!isMapVisible)}
+              className="text-xs"
+            >
+              {isMapVisible ? (
+                <>
+                  <MapPin className="mr-1 h-4 w-4" />
+                  Hide Map
+                </>
+              ) : (
+                <>
+                  <Map className="mr-1 h-4 w-4" />
+                  Show Map
+                </>
+              )}
+            </Button>
+          </div>
+          
+          {/* Hotel results section */}
+          {loading ? (
+            <div className="flex items-center justify-center h-80">
+              <Loader2 className="h-10 w-10 animate-spin text-airblue" />
+            </div>
+          ) : (
+            <>
+              {/* Map */}
+              {isMapVisible && hotels.length > 0 && (
+                <div className="mt-6 mb-6">
+                  <MapWithHotels
+                    hotels={hotels}
+                    selectedHotel={selectedHotel}
+                    onHotelSelect={handleHotelSelect}
+                    city={getCurrentCity()}
+                  />
+                  <div className="flex items-center mt-2 text-xs text-gray-500">
+                    <Plane className="h-3 w-3 mr-1 text-airblue" />
+                    <span className="mr-4">Airport</span>
+                    <div className="h-3 w-3 rounded-full bg-red-500 mr-1" />
+                    <span className="mr-4">Hotels</span>
+                    <div className="h-3 w-3 rounded-full bg-green-500 mr-1" />
+                    <span>Selected Hotel</span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Hotel Cards */}
+              {hotels.length > 0 ? (
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {hotels.map((hotel) => (
+                    <HotelCard
+                      key={hotel.id}
+                      hotel={hotel}
+                      isSelected={selectedHotel?.id === hotel.id}
+                      onSelect={() => handleHotelSelect(hotel)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-40 mt-8">
+                  <Hotel className="h-10 w-10 text-gray-300 mb-2" />
+                  <p className="text-gray-500">No hotels found. Try a different location or dates.</p>
+                </div>
+              )}
+              
+              {/* Selected Hotel Booking Details */}
+              {hotelBooking && (
+                <Card className="mt-8 border-airblue">
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="col-span-2">
+                        <h3 className="text-xl font-semibold">{hotelBooking.name}</h3>
+                        <p className="text-sm text-gray-500 mt-1">{hotelBooking.address}</p>
+                        
+                        <div className="flex items-center mt-2">
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          <span className="text-sm ml-1">{hotelBooking.rating}</span>
+                        </div>
+                        
+                        <div className="mt-4 grid grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="text-sm font-medium">Check-in</h4>
+                            <p className="text-sm">{format(checkin, "PPP")}</p>
+                            <p className="text-xs text-gray-500">After 2:00 PM</p>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-medium">Check-out</h4>
+                            <p className="text-sm">{format(checkout, "PPP")}</p>
+                            <p className="text-xs text-gray-500">Before 12:00 PM</p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4">
+                          <h4 className="text-sm font-medium">Room Type</h4>
+                          <p className="text-sm">{hotelBooking.roomType}</p>
+                        </div>
+                        
+                        <div className="mt-4">
+                          <h4 className="text-sm font-medium">Guests</h4>
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 text-gray-500 mr-1" />
+                            <p className="text-sm">{guests} guests, {rooms} room{rooms > 1 ? 's' : ''}</p>
+                          </div>
+                        </div>
+                        
+                        <h4 className="text-sm font-medium mt-4 mb-2">Transportation Options from Airport</h4>
+                        <div className="grid grid-cols-3 gap-2">
+                          {hotelBooking.availableCabs.map((cab, index) => (
+                            <Card key={index} className="border-gray-200">
+                              <CardContent className="p-3">
+                                <div className="flex justify-between items-center">
+                                  <div className="text-sm font-medium">{cab.type}</div>
+                                  <Car className="h-4 w-4 text-gray-500" />
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">₹{cab.price}</div>
+                                <div className="text-xs text-gray-500">{cab.estimatedTime}</div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Card className="border-gray-200">
+                          <CardContent className="p-4">
+                            <h3 className="text-lg font-semibold">Price Summary</h3>
+                            
+                            <div className="mt-4 space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-sm">Room Charges</span>
+                                <span className="text-sm font-medium">₹{hotelBooking.pricePerNight.toLocaleString()} x {Math.round((checkout.getTime() - checkin.getTime()) / (1000 * 60 * 60 * 24))} night{Math.round((checkout.getTime() - checkin.getTime()) / (1000 * 60 * 60 * 24)) > 1 ? 's' : ''}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-sm">Taxes & Fees (18%)</span>
+                                <span className="text-sm font-medium">₹{Math.round(calculateTotalPrice() * 0.18).toLocaleString()}</span>
+                              </div>
+                              <div className="border-t border-gray-200 pt-2 mt-2">
+                                <div className="flex justify-between font-semibold">
+                                  <span>Total</span>
+                                  <span>₹{(calculateTotalPrice() + Math.round(calculateTotalPrice() * 0.18)).toLocaleString()}</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <Button className="w-full mt-4 bg-airblue hover:bg-airblue/90">
+                              Book Now
+                            </Button>
+                          </CardContent>
+                        </Card>
+                        
+                        <div className="mt-4">
+                          <h4 className="text-sm font-medium mb-2">Amenities</h4>
+                          <div className="grid grid-cols-2 gap-y-2">
+                            {hotelBooking.amenities.map((amenity, index) => (
+                              <div key={index} className="flex items-center">
+                                <Check className="h-3 w-3 text-airblue mr-1" />
+                                <span className="text-xs">{amenity}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="trends" className="pt-4">
+          <PriceTrendChart />
+          
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-lg font-medium mb-2">Price Predictions</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Based on historical data and current trends, the following predictions are available:
+                </p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Hotel Rates in {location}</h4>
+                    <div className="flex items-center">
+                      <LineChart className="h-4 w-4 text-airblue mr-2" />
+                      <span className="text-sm">
+                        Prices are expected to <span className="font-medium text-orange-500">increase by 12%</span> in the next 30 days.
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Best Time to Book</h4>
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 text-airblue mr-2" />
+                      <span className="text-sm">
+                        Book <span className="font-medium text-green-500">2-3 weeks in advance</span> for the best rates.
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Seasonal Trends</h4>
+                    <div className="flex items-center">
+                      <LineChart className="h-4 w-4 text-airblue mr-2" />
+                      <span className="text-sm">
+                        Lowest rates typically occur in <span className="font-medium text-green-500">June</span> and <span className="font-medium text-green-500">September</span>.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-lg font-medium mb-2">Demand Forecast</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Current booking trends and occupancy rates:
+                </p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Current Occupancy</h4>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div className="bg-airblue h-2.5 rounded-full" style={{ width: '78%' }}></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">78% of hotels are currently booked in {location}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Weekend Premium</h4>
+                    <div className="flex items-center">
+                      <span className="text-sm">
+                        Prices are typically <span className="font-medium text-orange-500">25% higher</span> on weekends compared to weekdays.
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Upcoming Events</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center">
+                        <div className="h-2 w-2 rounded-full bg-red-500 mr-2"></div>
+                        <span className="text-sm">Tech Conference (Jul 15-18) - High demand expected</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="h-2 w-2 rounded-full bg-amber-500 mr-2"></div>
+                        <span className="text-sm">Cultural Festival (Aug 5-8) - Moderate demand</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default HotelSearch;

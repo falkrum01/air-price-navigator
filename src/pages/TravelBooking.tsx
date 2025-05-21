@@ -5,12 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowRight, ArrowLeft, CheckCircle, Hotel, Home, Car, Plane } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle, Hotel, Home, Plane } from "lucide-react";
 import Layout from "@/components/Layout";
 import FlightSearch from "@/components/FlightSearch";
 import HotelSearch from "@/components/HotelSearch";
 import HostelSearch from "@/components/HostelSearch";
-import CabSearch from "@/components/CabSearch";
 import BookingSummary from "@/components/BookingSummary";
 import { useToast } from "@/hooks/use-toast";
 import { useBookingContext } from "@/contexts/BookingContext";
@@ -20,7 +19,7 @@ const TravelBooking: React.FC = () => {
   const [accommodationType, setAccommodationType] = useState<'hotel' | 'hostel'>('hotel');
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { booking, hasFlightBooked, hasAccommodationBooked, hasCabBooked, resetBooking } = useBookingContext();
+  const { booking, hasFlightBooked, hasAccommodationBooked, resetBooking } = useBookingContext();
 
   // Automatically move to the next tab when a selection is made
   useEffect(() => {
@@ -36,20 +35,12 @@ const TravelBooking: React.FC = () => {
       setTimeout(() => {
         toast({
           title: "Accommodation selected!",
-          description: "Now let's arrange your ground transport",
-        });
-        setActiveTab('transport');
-      }, 1000);
-    } else if (hasCabBooked && activeTab === 'transport') {
-      setTimeout(() => {
-        toast({
-          title: "Transport selected!",
           description: "Please review your complete itinerary",
         });
         setActiveTab('summary');
       }, 1000);
     }
-  }, [hasFlightBooked, hasAccommodationBooked, hasCabBooked, activeTab, toast]);
+  }, [hasFlightBooked, hasAccommodationBooked, activeTab, toast]);
 
   // Function to handle flight booking completion
   const handleFlightBookingComplete = () => {
@@ -97,7 +88,7 @@ const TravelBooking: React.FC = () => {
         <h1 className="text-3xl font-bold text-center mb-6">Plan Your Trip</h1>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="flights" className="flex items-center gap-2">
               <Plane className="h-4 w-4" />
               <span>Flights</span>
@@ -107,11 +98,6 @@ const TravelBooking: React.FC = () => {
               <Hotel className="h-4 w-4" />
               <span>Accommodation</span>
               {hasAccommodationBooked && <CheckCircle className="h-3 w-3 ml-1 text-green-500" />}
-            </TabsTrigger>
-            <TabsTrigger value="transport" className="flex items-center gap-2">
-              <Car className="h-4 w-4" />
-              <span>Ground Transport</span>
-              {hasCabBooked && <CheckCircle className="h-3 w-3 ml-1 text-green-500" />}
             </TabsTrigger>
             <TabsTrigger value="summary" className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4" />
@@ -187,44 +173,11 @@ const TravelBooking: React.FC = () => {
                       <ArrowLeft className="mr-2 h-4 w-4" /> Back to Flights
                     </Button>
                     <Button 
-                      onClick={() => setActiveTab('transport')}
+                      onClick={() => setActiveTab('summary')}
                       className="bg-airblue hover:bg-airblue/90"
                       disabled={!hasAccommodationBooked}
                     >
-                      Continue to Transport <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="transport" className="space-y-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <h2 className="text-2xl font-semibold mb-4">Book Ground Transportation</h2>
-                  
-                  {!hasFlightBooked && (
-                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-md mb-4">
-                      <p className="text-amber-700">You haven't selected a flight yet. Consider booking a flight first.</p>
-                    </div>
-                  )}
-                  
-                  <CabSearch />
-                  
-                  <div className="mt-6 flex justify-between">
-                    <Button 
-                      onClick={() => setActiveTab('accommodation')} 
-                      variant="outline"
-                      className="flex items-center"
-                    >
-                      <ArrowLeft className="mr-2 h-4 w-4" /> Back to Accommodation
-                    </Button>
-                    <Button 
-                      onClick={() => setActiveTab('summary')}
-                      className="bg-airblue hover:bg-airblue/90"
-                      disabled={!hasCabBooked}
-                    >
-                      Continue to Review <ArrowRight className="ml-2 h-4 w-4" />
+                      Review & Confirm <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>

@@ -11,6 +11,11 @@ import Team from "./pages/Team";
 import Auth from "./pages/Auth";
 import TravelBooking from "./pages/TravelBooking";
 import BookingConfirmation from "./pages/BookingConfirmation";
+import Hotels from "./pages/Hotels";
+import Hostels from "./pages/Hostels";
+import PriceTrends from "./pages/PriceTrends";
+import Airports from "./pages/Airports";
+import Cabs from "./pages/Cabs";
 import { AuthProvider } from "./contexts/AuthContext";
 import { BookingProvider } from "./contexts/BookingContext";
 import PrivateRoute from "./components/PrivateRoute";
@@ -59,6 +64,31 @@ const App = () => (
               <Route path="/booking-confirmation" element={
                 <PrivateRoute>
                   <BookingConfirmation />
+                </PrivateRoute>
+              } />
+              <Route path="/hotels" element={
+                <PrivateRoute>
+                  <Hotels />
+                </PrivateRoute>
+              } />
+              <Route path="/hostels" element={
+                <PrivateRoute>
+                  <Hostels />
+                </PrivateRoute>
+              } />
+              <Route path="/cabs" element={
+                <PrivateRoute>
+                  <Cabs />
+                </PrivateRoute>
+              } />
+              <Route path="/price-trends" element={
+                <PrivateRoute>
+                  <PriceTrends />
+                </PrivateRoute>
+              } />
+              <Route path="/airports" element={
+                <PrivateRoute>
+                  <Airports />
                 </PrivateRoute>
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

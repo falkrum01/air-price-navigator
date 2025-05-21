@@ -8,40 +8,89 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "@/hooks/use-toast";
-import { Plane, Calendar, MapPin, CreditCard, IndianRupee, Banknote, Wallet, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Plane, Calendar, MapPin, CreditCard, IndianRupee, Banknote, Wallet, Loader2, Hotel, Home, Car } from "lucide-react";
 import { format } from "date-fns";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 
 declare module 'jspdf' {
   interface jsPDF {
-    autoTable: (options: any) => jsPDF;
+    autoTable: (options: UserOptions) => jsPDF;
     lastAutoTable: {
       finalY: number;
     };
   }
 }
 
+import { UserOptions } from 'jspdf-autotable';
+
 interface PaymentFormProps {
-  flightDetails: {
-    airline: string;
-    flightNumber: string;
-    price: number;
-    origin: string;
-    destination: string;
-    departureDate: string;
-    returnDate?: string;
-    passengers: number;
-    cabinClass: string;
-    departureTime?: string;
-    arrivalTime?: string;
-    duration?: string;
+  bookingDetails: {
+    flight?: {
+      airline: string;
+      flightNumber?: string;
+      id?: string;
+      price: number;
+      origin: string;
+      destination: string;
+      departureDate: string | Date;
+      returnDate?: string | Date;
+      passengers?: number;
+      cabinClass?: string;
+      departureTime?: string;
+      arrivalTime?: string;
+      duration?: string;
+    };
+    hotel?: {
+      id: string;
+      name: string;
+      location: string;
+      checkIn: Date;
+      checkOut: Date;
+      totalPrice: number;
+      roomType: string;
+      guestCount: number;
+      pricePerNight: number;
+      amenities?: string[];
+      image?: string;
+      rating?: number;
+      coordinates?: {
+        lat: number;
+        lng: number;
+      };
+    };
+    hostel?: {
+      id: string;
+      name: string;
+      location: string;
+      checkIn: Date;
+      checkOut: Date;
+      totalPrice: number;
+      bedType?: string;
+      guestCount: number;
+      pricePerNight: number;
+      amenities?: string[];
+      image?: string;
+      rating?: number;
+    };
+    cab?: {
+      id: string;
+      type: string;
+      price: number;
+      pickupLocation: string;
+      dropoffLocation: string;
+      pickupTime: Date;
+      distance: string;
+      estimatedTime: string;
+    };
   };
+  totalAmount: number;
+  onSuccess: () => void;
   onCancel: () => void;
 }
 
-const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) => {
+const PaymentForm: React.FC<PaymentFormProps> = ({ bookingDetails, totalAmount, onSuccess, onCancel }) => {
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'wallet'>('card');
   const [cardNumber, setCardNumber] = useState("");
   const [cardName, setCardName] = useState("");
@@ -53,7 +102,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const totalAmount = flightDetails.price * flightDetails.passengers;
   const taxes = Math.round(totalAmount * 0.18);
   const finalAmount = totalAmount + taxes;
 
@@ -70,33 +118,65 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
       // Generate a random transaction ID
       const transactionId = `TXN${Math.floor(Math.random() * 1000000000).toString().padStart(9, '0')}`;
       
-      // Calculate amounts
-      const baseFare = flightDetails.price * flightDetails.passengers;
-      const taxes = Math.round(baseFare * 0.18);
-      const finalAmount = baseFare + taxes;
-      
-      // Prepare booking data
-      const bookingData = {
+      // Prepare booking data - base structure
+      const bookingData: any = {
         user_id: user?.id,
-        origin: flightDetails.origin,
-        destination: flightDetails.destination,
-        departure_date: flightDetails.departureDate,
-        return_date: flightDetails.returnDate || null,
-        airline: flightDetails.airline,
-        flight_number: flightDetails.flightNumber,
         price: finalAmount,
         payment_method: paymentMethod,
         transaction_id: transactionId,
-        booking_status: 'confirmed'
+        booking_status: 'confirmed',
+        booking_date: new Date().toISOString()
       };
       
-      // Add cabin_class and passenger_count if they exist in the schema
-      if (flightDetails.cabinClass) {
-        (bookingData as any).cabin_class = flightDetails.cabinClass;
+      // Add flight details if available
+      if (bookingDetails.flight) {
+        bookingData.origin = bookingDetails.flight.origin;
+        bookingData.destination = bookingDetails.flight.destination;
+        bookingData.departure_date = bookingDetails.flight.departureDate;
+        bookingData.return_date = bookingDetails.flight.returnDate || null;
+        bookingData.airline = bookingDetails.flight.airline;
+        bookingData.flight_id = bookingDetails.flight.id || bookingDetails.flight.flightNumber;
+        
+        if (bookingDetails.flight.cabinClass) {
+          bookingData.cabin_class = bookingDetails.flight.cabinClass;
+        }
+        
+        if (bookingDetails.flight.passengers) {
+          bookingData.passenger_count = bookingDetails.flight.passengers;
+        }
       }
       
-      if (flightDetails.passengers) {
-        (bookingData as any).passenger_count = flightDetails.passengers;
+      // Add hotel details if available
+      if (bookingDetails.hotel) {
+        bookingData.hotel_id = bookingDetails.hotel.id;
+        bookingData.hotel_name = bookingDetails.hotel.name;
+        bookingData.hotel_location = bookingDetails.hotel.location;
+        bookingData.check_in_date = bookingDetails.hotel.checkIn;
+        bookingData.check_out_date = bookingDetails.hotel.checkOut;
+        bookingData.room_type = bookingDetails.hotel.roomType;
+        bookingData.guest_count = bookingDetails.hotel.guestCount;
+      }
+      
+      // Add hostel details if available
+      if (bookingDetails.hostel) {
+        bookingData.hostel_id = bookingDetails.hostel.id;
+        bookingData.hostel_name = bookingDetails.hostel.name;
+        bookingData.hostel_location = bookingDetails.hostel.location;
+        bookingData.check_in_date = bookingDetails.hostel.checkIn;
+        bookingData.check_out_date = bookingDetails.hostel.checkOut;
+        bookingData.bed_type = bookingDetails.hostel.bedType || 'Standard';
+        bookingData.guest_count = bookingDetails.hostel.guestCount;
+      }
+      
+      // Add cab details if available
+      if (bookingDetails.cab) {
+        bookingData.cab_id = bookingDetails.cab.id;
+        bookingData.cab_type = bookingDetails.cab.type;
+        bookingData.pickup_location = bookingDetails.cab.pickupLocation;
+        bookingData.dropoff_location = bookingDetails.cab.dropoffLocation;
+        bookingData.pickup_time = bookingDetails.cab.pickupTime;
+        bookingData.distance = bookingDetails.cab.distance;
+        bookingData.estimated_time = bookingDetails.cab.estimatedTime;
       }
       
       // Save the booking to the database
@@ -107,23 +187,20 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
         throw new Error(`Payment failed: ${error.message}`);
       }
       
-      // Generate PDF ticket
+      // Generate PDF ticket (if needed)
       generatePDF(transactionId);
       
       // Show success message
       toast({
         title: "Payment Successful",
-        description: "Your flight has been booked successfully! Check your email for details.",
+        description: "Your booking has been confirmed! You can download your itinerary from the confirmation page.",
         variant: "default",
       });
       
-      // Simulate sending email
-      sendConfirmationEmail(transactionId);
-      
-      // Redirect after a delay
+      // Call the onSuccess callback
       setTimeout(() => {
-        navigate("/");
-      }, 2000);
+        onSuccess();
+      }, 1500);
     } catch (error: any) {
       toast({
         title: "Payment Failed",
@@ -195,110 +272,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
     return true;
   };
 
+  // This function is maintained for compatibility and called by the booking confirmation component
   const generatePDF = (transactionId: string) => {
-    const doc = new jsPDF();
-    const pnr = `PNR${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
-    const ticketNumber = `TK${Math.floor(Math.random() * 1000000000).toString().padStart(10, '0')}`;
-    const gate = String.fromCharCode(65 + Math.floor(Math.random() * 10)) + (Math.floor(Math.random() * 20) + 1);
-    const seat = (Math.floor(Math.random() * 30) + 1) + String.fromCharCode(65 + Math.floor(Math.random() * 6));
-    const terminal = Math.floor(Math.random() * 3) + 1;
-    const baggageAllowance = flightDetails.cabinClass === 'economy' ? '15kg' : flightDetails.cabinClass === 'business' ? '30kg' : '40kg';
-    
-    // Add Airline Header
-    doc.setFillColor(10, 61, 98);
-    doc.rect(0, 0, 210, 40, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.text(flightDetails.airline, 20, 25);
-    doc.setFontSize(12);
-    doc.text("E-TICKET / ITINERARY / RECEIPT", 120, 20);
-    doc.text("BOARDING PASS", 120, 30);
-    
-    // Add PNR and Ticket Number
-    doc.setFontSize(10);
-    doc.text(`PNR: ${pnr}`, 20, 50);
-    doc.text(`E-Ticket Number: ${ticketNumber}`, 20, 57);
-    doc.text(`Booking Ref: ${transactionId}`, 20, 64);
-    doc.text(`Status: CONFIRMED`, 120, 50);
-    doc.text(`Issued On: ${format(new Date(), "dd MMM yyyy")}`, 120, 57);
-    
-    // Passenger Information
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.setFillColor(230, 230, 230);
-    doc.rect(20, 70, 170, 10, 'F');
-    doc.text("PASSENGER INFORMATION", 22, 77);
-    
-    doc.setFontSize(10);
-    doc.text(`Passenger: ${user?.user_metadata?.full_name || 'Passenger Name'}`, 22, 90);
-    doc.text(`Class: ${flightDetails.cabinClass.toUpperCase()}`, 22, 97);
-    doc.text(`Seat: ${seat}`, 120, 90);
-    doc.text(`Baggage: ${baggageAllowance}`, 120, 97);
-    
-    // Flight Details
-    doc.setFontSize(12);
-    doc.setFillColor(230, 230, 230);
-    doc.rect(20, 105, 170, 10, 'F');
-    doc.text("FLIGHT DETAILS", 22, 112);
-    
-    // Flight segment
-    doc.setFontSize(10);
-    doc.text(`${flightDetails.origin} → ${flightDetails.destination}`, 22, 125);
-    doc.text(`Flight: ${flightDetails.airline} ${flightDetails.flightNumber}`, 22, 132);
-    doc.text(`Date: ${format(new Date(flightDetails.departureDate), "dd MMM yyyy")}`, 22, 139);
-    doc.text(`Departure: ${flightDetails.departureTime || '--:--'}`, 22, 146);
-    doc.text(`Arrival: ${flightDetails.arrivalTime || '--:--'}`, 22, 153);
-    doc.text(`Duration: ${flightDetails.duration || '--h --m'}`, 100, 125);
-    doc.text(`Gate: ${gate}`, 100, 132);
-    doc.text(`Terminal: ${terminal}`, 100, 139);
-    
-    // Payment Information
-    doc.setFontSize(12);
-    doc.setFillColor(230, 230, 230);
-    doc.rect(20, 160, 170, 10, 'F');
-    doc.text("PAYMENT DETAILS", 22, 167);
-    
-    const baseFare = flightDetails.price * flightDetails.passengers;
-    const taxes = Math.round(baseFare * 0.18);
-    const finalAmount = baseFare + taxes;
-    
-    doc.setFontSize(10);
-    doc.text(`Base Fare (${flightDetails.passengers} x ₹${flightDetails.price.toLocaleString()}):`, 22, 180);
-    doc.text(`₹${baseFare.toLocaleString()}`, 160, 180, { align: 'right' } as any);
-    
-    doc.text(`Taxes & Fees:`, 22, 187);
-    doc.text(`₹${taxes.toLocaleString()}`, 160, 187, { align: 'right' } as any);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Total Amount:`, 22, 197);
-    doc.text(`₹${finalAmount.toLocaleString()}`, 160, 197, { align: 'right' } as any);
-    doc.setFont('helvetica', 'normal');
-    
-    // Barcode and Important Information
-    doc.setFontSize(10);
-    doc.text(`Payment Method: ${paymentMethod.toUpperCase()}`, 22, 210);
-    doc.text(`Status: PAID`, 22, 217);
-    
-    // Add a simple barcode (as a placeholder)
-    doc.setFillColor(0, 0, 0);
-    for (let i = 0; i < 20; i++) {
-      const barHeight = 5 + Math.random() * 5;
-      doc.rect(100 + (i * 3), 215, 2, barHeight, 'F');
-    }
-    
-    // Add important notes
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.text("IMPORTANT: Please bring this e-ticket and a valid photo ID to the airport.", 22, 235);
-    doc.text(`Check-in opens 48 hours before departure and closes 60 minutes before departure.`, 22, 240);
-    doc.text(`For assistance, contact SkyPredict Support at support@skypredict.com or call +91 1234567890.`, 22, 245);
-    
-    // Add footer
-    doc.setFontSize(7);
-    doc.text(" 2025 SkyPredict. All rights reserved.", 105, 290, { align: 'center' } as any);
-    
-    // Save the PDF with a meaningful name
-    doc.save(`SkyPredict_Ticket_${pnr}.pdf`);
+    // We're not actually generating the PDF here since that will be handled by the BookingSummary component
+    console.log(`Payment successful with transaction ID: ${transactionId}`);
+    return transactionId;
   };
 
   const sendConfirmationEmail = (transactionId: string) => {
@@ -312,6 +290,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
       });
     }, 1000);
   };
+  
+  const { toast } = useToast();
 
   const formatCardNumber = (value: string) => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
@@ -355,55 +335,85 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ flightDetails, onCancel }) =>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-6">
-            <div className="bg-muted p-4 rounded-lg space-y-3">
-              <div className="flex justify-between">
-                <span className="font-medium flex items-center">
-                  <Plane className="h-4 w-4 mr-2" />
-                  Flight
-                </span>
-                <span>{flightDetails.airline} {flightDetails.flightNumber}</span>
-              </div>
+          {/* Booking Summary Details */}
+          <div>
+            <div className="mt-8 border rounded-lg p-4 bg-gray-50">
+              <h3 className="font-semibold mb-4">Your Booking Summary</h3>
               
-              <div className="flex justify-between">
-                <span className="font-medium flex items-center">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Route
-                </span>
-                <span>{flightDetails.origin} - {flightDetails.destination}</span>
-              </div>
+              {/* Flight Details */}
+              {bookingDetails.flight && (
+                <div className="border-b pb-3 mb-3">
+                  <div className="flex items-start gap-3 mb-2">
+                    <Plane className="h-5 w-5 text-blue-600 mt-1" />
+                    <div>
+                      <h4 className="font-medium">Flight</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {bookingDetails.flight.airline} • {bookingDetails.flight.origin} to {bookingDetails.flight.destination}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               
-              <div className="flex justify-between">
-                <span className="font-medium flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Date
-                </span>
-                <span>
-                  {format(new Date(flightDetails.departureDate), "dd MMM yyyy")}
-                  {flightDetails.returnDate && ` - ${format(new Date(flightDetails.returnDate), "dd MMM yyyy")}`}
-                </span>
-              </div>
+              {/* Hotel Details */}
+              {bookingDetails.hotel && (
+                <div className="border-b pb-3 mb-3">
+                  <div className="flex items-start gap-3 mb-2">
+                    <Hotel className="h-5 w-5 text-amber-600 mt-1" />
+                    <div>
+                      <h4 className="font-medium">Hotel</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {bookingDetails.hotel.name}, {bookingDetails.hotel.location}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(bookingDetails.hotel.checkIn), "dd MMM yyyy")} - {format(new Date(bookingDetails.hotel.checkOut), "dd MMM yyyy")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               
-              <div className="flex justify-between">
-                <span className="font-medium flex items-center">
-                  <IndianRupee className="h-4 w-4 mr-2" />
-                  Base Fare
-                </span>
-                <span>₹{totalAmount.toLocaleString('en-IN')}</span>
-              </div>
+              {/* Hostel Details */}
+              {bookingDetails.hostel && (
+                <div className="border-b pb-3 mb-3">
+                  <div className="flex items-start gap-3 mb-2">
+                    <Home className="h-5 w-5 text-green-600 mt-1" />
+                    <div>
+                      <h4 className="font-medium">Hostel</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {bookingDetails.hostel.name}, {bookingDetails.hostel.location}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(bookingDetails.hostel.checkIn), "dd MMM yyyy")} - {format(new Date(bookingDetails.hostel.checkOut), "dd MMM yyyy")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               
-              <div className="flex justify-between">
-                <span className="font-medium">Taxes & Fees (18%)</span>
-                <span>₹{taxes.toLocaleString('en-IN')}</span>
-              </div>
-              
-              <div className="pt-2 border-t">
-                <div className="flex justify-between font-bold">
+              {/* Cab Details */}
+              {bookingDetails.cab && (
+                <div className="border-b pb-3 mb-3">
+                  <div className="flex items-start gap-3 mb-2">
+                    <Car className="h-5 w-5 text-purple-600 mt-1" />
+                    <div>
+                      <h4 className="font-medium">Ground Transport</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {bookingDetails.cab.type} • {bookingDetails.cab.pickupLocation} to {bookingDetails.cab.dropoffLocation}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-3 border-t">
+                <div className="flex justify-between items-center font-semibold">
                   <span>Total</span>
                   <span>₹{finalAmount.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
+          </div>
             
             <div>
               <h3 className="font-medium mb-3">Select Payment Method</h3>

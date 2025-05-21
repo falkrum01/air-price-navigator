@@ -1,0 +1,316 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Loader2, MapPin, Star, Check, Calendar, Users, Map, Navigation, Plane, LineChart, Building } from "lucide-react";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
+import { Hotel as BookingHotel } from "@/types/booking";
+
+// Google Maps API key from environment variables
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+if (!GOOGLE_MAPS_API_KEY) {
+  console.error('Google Maps API key is not set. Please check your environment variables.');
+}
+
+const libraries = ['places'] as ('places' | 'drawing' | 'geometry' | 'visualization')[];
+
+interface Hotel extends BookingHotel {
+  address: string;
+  amenities: string[];
+  imageUrl: string;
+  roomType: string;
+  distance: string; // Distance from airport
+  timeFromAirport: string; // Time to reach from airport
+  availableCabs: {
+    type: string;
+    price: number;
+    estimatedTime: string;
+  }[];
+}
+
+// Define city coordinates and airports - Same as in CabSearch.tsx
+const cityData = {
+  "Hyderabad": { 
+    center: { lat: 17.3850, lng: 78.4867 },
+    airport: { 
+      name: "Rajiv Gandhi International Airport", 
+      code: "HYD",
+      coordinates: { lat: 17.2403, lng: 78.4294 }
+    }
+  },
+  "Delhi": { 
+    center: { lat: 28.6139, lng: 77.2090 },
+    airport: { 
+      name: "Indira Gandhi International Airport", 
+      code: "DEL",
+      coordinates: { lat: 28.5562, lng: 77.1000 }
+    }
+  },
+  "Mumbai": { 
+    center: { lat: 19.0760, lng: 72.8777 },
+    airport: { 
+      name: "Chhatrapati Shivaji Maharaj International Airport", 
+      code: "BOM",
+      coordinates: { lat: 19.0896, lng: 72.8656 }
+    }
+  },
+  "Bangalore": { 
+    center: { lat: 12.9716, lng: 77.5946 },
+    airport: { 
+      name: "Kempegowda International Airport", 
+      code: "BLR",
+      coordinates: { lat: 13.1989, lng: 77.7068 }
+    }
+  },
+  "Chennai": { 
+    center: { lat: 13.0827, lng: 80.2707 },
+    airport: { 
+      name: "Chennai International Airport", 
+      code: "MAA",
+      coordinates: { lat: 12.9941, lng: 80.1709 }
+    }
+  }
+};
+
+// Default city
+const defaultCity = "Hyderabad";
+
+// City-specific hotel data
+const cityHotels: Record<string, Hotel[]> = {
+  "Hyderabad": [
+    {
+      id: "h1",
+      name: "Grand Hyatt",
+      rating: 4.8,
+      pricePerNight: 5600,
+      location: "Banjara Hills, Hyderabad",
+      address: "Road No. 2, Banjara Hills, Hyderabad",
+      coordinates: { lat: 17.4156, lng: 78.4380 },
+      amenities: ["Wi-Fi", "Pool", "Spa", "Restaurant", "Bar", "Gym", "Room Service", "Conference Room"],
+      imageUrl: "https://via.placeholder.com/300x200?text=Grand+Hyatt",
+      roomType: "Deluxe Suite",
+      distance: "24 km",
+      timeFromAirport: "35 min",
+      availableCabs: [
+        { type: "Economy", price: 450, estimatedTime: "40 min" },
+        { type: "Sedan", price: 650, estimatedTime: "38 min" },
+        { type: "SUV", price: 850, estimatedTime: "38 min" }
+      ]
+    },
+    {
+      id: "h2",
+      name: "Taj Krishna",
+      rating: 4.7,
+      pricePerNight: 6500,
+      location: "Banjara Hills, Hyderabad",
+      address: "Road No. 1, Banjara Hills, Hyderabad",
+      coordinates: { lat: 17.4106, lng: 78.4400 },
+      amenities: ["Wi-Fi", "Pool", "Spa", "Restaurant", "Bar", "Gym", "Room Service"],
+      imageUrl: "https://via.placeholder.com/300x200?text=Taj+Krishna",
+      roomType: "Executive Suite",
+      distance: "26 km",
+      timeFromAirport: "40 min",
+      availableCabs: [
+        { type: "Economy", price: 500, estimatedTime: "45 min" },
+        { type: "Sedan", price: 700, estimatedTime: "42 min" },
+        { type: "SUV", price: 900, estimatedTime: "42 min" }
+      ]
+    },
+    {
+      id: "h3",
+      name: "Novotel Hyderabad",
+      rating: 4.5,
+      pricePerNight: 4200,
+      location: "HITEC City, Hyderabad",
+      address: "Novotel & HICC Complex, Cyberabad, Hyderabad",
+      coordinates: { lat: 17.4269, lng: 78.3499 },
+      amenities: ["Wi-Fi", "Pool", "Restaurant", "Bar", "Gym", "Room Service"],
+      imageUrl: "https://via.placeholder.com/300x200?text=Novotel",
+      roomType: "Superior Room",
+      distance: "32 km",
+      timeFromAirport: "45 min",
+      availableCabs: [
+        { type: "Economy", price: 550, estimatedTime: "50 min" },
+        { type: "Sedan", price: 750, estimatedTime: "48 min" },
+        { type: "SUV", price: 950, estimatedTime: "48 min" }
+      ]
+    },
+    {
+      id: "h4",
+      name: "Radisson Blu",
+      rating: 4.4,
+      pricePerNight: 4800,
+      location: "Banjara Hills, Hyderabad",
+      address: "8-2-409, Road No. 6, Banjara Hills, Hyderabad",
+      coordinates: { lat: 17.4164, lng: 78.4329 },
+      amenities: ["Wi-Fi", "Pool", "Restaurant", "Bar", "Gym"],
+      imageUrl: "https://via.placeholder.com/300x200?text=Radisson+Blu",
+      roomType: "Business Class Room",
+      distance: "25 km",
+      timeFromAirport: "38 min",
+      availableCabs: [
+        { type: "Economy", price: 480, estimatedTime: "42 min" },
+        { type: "Sedan", price: 680, estimatedTime: "40 min" },
+        { type: "SUV", price: 880, estimatedTime: "40 min" }
+      ]
+    },
+    {
+      id: "h5",
+      name: "ITC Kakatiya",
+      rating: 4.6,
+      pricePerNight: 7200,
+      location: "Begumpet, Hyderabad",
+      address: "6-3-1187, Begumpet, Hyderabad",
+      coordinates: { lat: 17.4277, lng: 78.4523 },
+      amenities: ["Wi-Fi", "Pool", "Spa", "Restaurant", "Bar", "Gym", "Room Service"],
+      imageUrl: "https://via.placeholder.com/300x200?text=ITC+Kakatiya",
+      roomType: "Executive Club Room",
+      distance: "28 km",
+      timeFromAirport: "42 min",
+      availableCabs: [
+        { type: "Economy", price: 520, estimatedTime: "46 min" },
+        { type: "Sedan", price: 720, estimatedTime: "44 min" },
+        { type: "SUV", price: 920, estimatedTime: "44 min" }
+      ]
+    }
+  ],
+  "Delhi": [
+    {
+      id: "d1",
+      name: "The Leela Palace",
+      rating: 4.9,
+      pricePerNight: 12000,
+      location: "Diplomatic Enclave, New Delhi",
+      address: "Diplomatic Enclave, Chanakyapuri, New Delhi",
+      coordinates: { lat: 28.5977, lng: 77.1760 },
+      amenities: ["Wi-Fi", "Pool", "Spa", "Restaurant", "Bar", "Gym", "Room Service", "Conference Room"],
+      imageUrl: "https://via.placeholder.com/300x200?text=Leela+Palace",
+      roomType: "Royal Suite",
+      distance: "12 km",
+      timeFromAirport: "25 min",
+      availableCabs: [
+        { type: "Economy", price: 350, estimatedTime: "28 min" },
+        { type: "Sedan", price: 550, estimatedTime: "25 min" },
+        { type: "SUV", price: 750, estimatedTime: "25 min" }
+      ]
+    },
+    {
+      id: "d2",
+      name: "Taj Palace",
+      rating: 4.7,
+      pricePerNight: 9500,
+      location: "Diplomatic Enclave, New Delhi",
+      address: "2, Sardar Patel Marg, Diplomatic Enclave, New Delhi",
+      coordinates: { lat: 28.6012, lng: 77.1716 },
+      amenities: ["Wi-Fi", "Pool", "Spa", "Restaurant", "Bar", "Gym", "Room Service"],
+      imageUrl: "https://via.placeholder.com/300x200?text=Taj+Palace",
+      roomType: "Luxury Room",
+      distance: "13 km",
+      timeFromAirport: "26 min",
+      availableCabs: [
+        { type: "Economy", price: 360, estimatedTime: "30 min" },
+        { type: "Sedan", price: 560, estimatedTime: "27 min" },
+        { type: "SUV", price: 760, estimatedTime: "27 min" }
+      ]
+    }
+  ],
+  "Mumbai": [
+    {
+      id: "m1",
+      name: "The Taj Mahal Palace",
+      rating: 4.9,
+      pricePerNight: 16000,
+      location: "Colaba, Mumbai",
+      address: "Apollo Bunder, Colaba, Mumbai",
+      coordinates: { lat: 18.9220, lng: 72.8347 },
+      amenities: ["Wi-Fi", "Pool", "Spa", "Restaurant", "Bar", "Gym", "Room Service", "Beach Access"],
+      imageUrl: "https://via.placeholder.com/300x200?text=Taj+Mahal+Palace",
+      roomType: "Luxury Grande Room",
+      distance: "26 km",
+      timeFromAirport: "55 min",
+      availableCabs: [
+        { type: "Economy", price: 650, estimatedTime: "60 min" },
+        { type: "Sedan", price: 850, estimatedTime: "58 min" },
+        { type: "SUV", price: 1050, estimatedTime: "58 min" }
+      ]
+    }
+  ],
+  "Bangalore": [
+    {
+      id: "b1",
+      name: "The Oberoi",
+      rating: 4.8,
+      pricePerNight: 9000,
+      location: "MG Road, Bangalore",
+      address: "37-39, MG Road, Bangalore",
+      coordinates: { lat: 12.9757, lng: 77.6011 },
+      amenities: ["Wi-Fi", "Pool", "Spa", "Restaurant", "Bar", "Gym", "Room Service"],
+      imageUrl: "https://via.placeholder.com/300x200?text=The+Oberoi",
+      roomType: "Luxury Suite",
+      distance: "35 km",
+      timeFromAirport: "60 min",
+      availableCabs: [
+        { type: "Economy", price: 700, estimatedTime: "65 min" },
+        { type: "Sedan", price: 900, estimatedTime: "62 min" },
+        { type: "SUV", price: 1100, estimatedTime: "62 min" }
+      ]
+    }
+  ],
+  "Chennai": [
+    {
+      id: "c1",
+      name: "ITC Grand Chola",
+      rating: 4.7,
+      pricePerNight: 8500,
+      location: "Guindy, Chennai",
+      address: "63, Mount Road, Guindy, Chennai",
+      coordinates: { lat: 13.0107, lng: 80.2250 },
+      amenities: ["Wi-Fi", "Pool", "Spa", "Restaurant", "Bar", "Gym", "Room Service"],
+      imageUrl: "https://via.placeholder.com/300x200?text=ITC+Grand+Chola",
+      roomType: "Executive Club Room",
+      distance: "8 km",
+      timeFromAirport: "15 min",
+      availableCabs: [
+        { type: "Economy", price: 250, estimatedTime: "18 min" },
+        { type: "Sedan", price: 450, estimatedTime: "15 min" },
+        { type: "SUV", price: 650, estimatedTime: "15 min" }
+      ]
+    }
+  ]
+};
+
+const mapContainerStyle: React.CSSProperties = {
+  width: '100%',
+  height: '400px',
+  borderRadius: '0.5rem',
+};
+
+interface PriceTrend {
+  month: string;
+  avgPrice: number;
+  previousYearPrice: number;
+}
+
+// Mock price trend data
+const priceTrendData: PriceTrend[] = [
+  { month: "Jan", avgPrice: 4500, previousYearPrice: 4200 },
+  { month: "Feb", avgPrice: 4600, previousYearPrice: 4300 },
+  { month: "Mar", avgPrice: 4800, previousYearPrice: 4400 },
+  { month: "Apr", avgPrice: 5200, previousYearPrice: 4600 },
+  { month: "May", avgPrice: 5000, previousYearPrice: 4800 },
+  { month: "Jun", avgPrice: 4700, previousYearPrice: 4500 },
+  { month: "Jul", avgPrice: 5500, previousYearPrice: 5100 },
+  { month: "Aug", avgPrice: 5800, previousYearPrice: 5400 },
+  { month: "Sep", avgPrice: 5200, previousYearPrice: 4900 },
+  { month: "Oct", avgPrice: 4900, previousYearPrice: 4700 },
+  { month: "Nov", avgPrice: 5300, previousYearPrice: 5000 },
+  { month: "Dec", avgPrice: 6200, previousYearPrice: 5800 }
+];

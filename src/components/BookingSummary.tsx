@@ -13,12 +13,27 @@ import {
   FileText,
   Check,
   Loader2,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { useBookingContext } from "@/contexts/BookingContext";
 import { useToast } from "@/hooks/use-toast";
+import { jsPDF } from "jspdf";
+import 'jspdf-autotable';
+// Import types to properly extend jsPDF with autoTable
+import { UserOptions } from 'jspdf-autotable';
+
+// Declare module augmentation for jsPDF to include autoTable method
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: UserOptions) => jsPDF;
+    lastAutoTable: {
+      finalY: number;
+    };
+  }
+}
 
 const BookingSummary: React.FC = () => {
   const { booking, getTotalPrice } = useBookingContext();
@@ -29,14 +44,183 @@ const BookingSummary: React.FC = () => {
   
   const handleGeneratePDF = () => {
     setGeneratingPdf(true);
-    // In a real app, this would call an API to generate a PDF
-    setTimeout(() => {
+    
+    try {
+      // Create a new PDF document
+      const doc = new jsPDF();
+      
+      // Add title and header
+      doc.setFontSize(22);
+      doc.setTextColor(0, 102, 204);
+      doc.text('Air Price Navigator', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Travel Itinerary', 105, 30, { align: 'center' });
+      
+      doc.setLineWidth(0.5);
+      doc.line(20, 35, 190, 35);
+      
+      let yPos = 45;
+      
+      // Add booking reference and date
+      doc.setFontSize(10);
+      doc.text(`Booking Reference: AIR-${Math.floor(100000 + Math.random() * 900000)}`, 20, yPos);
+      doc.text(`Booking Date: ${format(new Date(), 'PPP')}`, 20, yPos + 5);
+      
+      yPos += 15;
+      
+      // Add flight details
+      if (booking.flight) {
+        doc.setFontSize(14);
+        doc.setTextColor(0, 102, 204);
+        doc.text('Flight Details', 20, yPos);
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        
+        doc.autoTable({
+          startY: yPos + 5,
+          head: [['Detail', 'Information']],
+          body: [
+            ['Airline', booking.flight.airline],
+            ['Flight', booking.flight.flightNumber],
+            ['From', booking.flight.origin],
+            ['To', booking.flight.destination],
+            ['Departure', `${format(new Date(booking.flight.departureTime), 'PPP p')}`],
+            ['Arrival', `${format(new Date(booking.flight.arrivalTime), 'PPP p')}`],
+            ['Duration', booking.flight.duration],
+            ['Cabin Class', booking.flight.cabinClass || 'Economy'],
+            ['Passengers', `${booking.flight.passengers || 1}`],
+            ['Price', `₹${booking.flight.price.toLocaleString()}`]
+          ],
+          theme: 'striped',
+          headStyles: { fillColor: [0, 102, 204] }
+        });
+        
+        yPos = doc.lastAutoTable.finalY + 10;
+      }
+      
+      // Add accommodation details
+      if (booking.hotel || booking.hostel) {
+        const accommodation = booking.hotel || booking.hostel;
+        const accommodationType = booking.hotel ? 'Hotel' : 'Hostel';
+        
+        doc.setFontSize(14);
+        doc.setTextColor(0, 102, 204);
+        doc.text(`${accommodationType} Details`, 20, yPos);
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        
+        doc.autoTable({
+          startY: yPos + 5,
+          head: [['Detail', 'Information']],
+          body: [
+            ['Name', accommodation.name],
+            ['Location', accommodation.location],
+            ['Check-in', `${formatDate(accommodation.checkIn)}`],
+            ['Check-out', `${formatDate(accommodation.checkOut)}`],
+            [booking.hotel ? 'Room Type' : 'Bed Type', booking.hotel ? booking.hotel.roomType : (booking.hostel?.bedType || 'Standard')],
+            ['Guests', `${accommodation.guestCount || 1}`],
+            ['Price', `₹${accommodation.totalPrice.toLocaleString()}`]
+          ],
+          theme: 'striped',
+          headStyles: { fillColor: [0, 102, 204] }
+        });
+        
+        yPos = doc.lastAutoTable.finalY + 10;
+      }
+      
+      // Add ground transportation details
+      if (booking.cab) {
+        doc.setFontSize(14);
+        doc.setTextColor(0, 102, 204);
+        doc.text('Ground Transportation', 20, yPos);
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        
+        doc.autoTable({
+          startY: yPos + 5,
+          head: [['Detail', 'Information']],
+          body: [
+            ['Type', `${booking.cab.type} Cab`],
+            ['Pickup', booking.cab.pickupLocation],
+            ['Dropoff', booking.cab.dropoffLocation],
+            ['Pickup Time', `${formatDate(booking.cab.pickupTime)} at ${format(booking.cab.pickupTime, "h:mm a")}`],
+            ['Distance', booking.cab.distance],
+            ['Estimated Time', booking.cab.estimatedTime],
+            ['Price', `₹${booking.cab.price.toLocaleString()}`]
+          ],
+          theme: 'striped',
+          headStyles: { fillColor: [0, 102, 204] }
+        });
+        
+        yPos = doc.lastAutoTable.finalY + 10;
+      }
+      
+      // Add price summary
+      doc.setFontSize(14);
+      doc.setTextColor(0, 102, 204);
+      doc.text('Price Summary', 20, yPos);
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      
+      const priceRows = [];
+      if (booking.flight) {
+        priceRows.push(['Flight', `₹${booking.flight.price.toLocaleString()}`]);
+      }
+      
+      if (booking.hotel) {
+        priceRows.push(['Hotel', `₹${booking.hotel.totalPrice.toLocaleString()}`]);
+      }
+      
+      if (booking.hostel) {
+        priceRows.push(['Hostel', `₹${booking.hostel.totalPrice.toLocaleString()}`]);
+      }
+      
+      if (booking.cab) {
+        priceRows.push(['Ground Transportation', `₹${booking.cab.price.toLocaleString()}`]);
+      }
+      
+      priceRows.push(['Total', `₹${getTotalPrice().toLocaleString()}`]);
+      
+      doc.autoTable({
+        startY: yPos + 5,
+        body: priceRows,
+        theme: 'plain',
+        styles: { fontSize: 10 },
+        columnStyles: {
+          0: { fontStyle: 'bold' },
+          1: { halign: 'right' }
+        },
+        foot: [['Total', `₹${getTotalPrice().toLocaleString()}`]],
+        footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' }
+      });
+      
+      // Add footer with contact information
+      yPos = doc.lastAutoTable.finalY + 20;
+      
+      doc.setFontSize(10);
+      doc.setTextColor(128, 128, 128);
+      doc.text('Thank you for booking with Air Price Navigator!', 105, yPos, { align: 'center' });
+      doc.text('For assistance, contact support@airpricenavigator.com', 105, yPos + 5, { align: 'center' });
+      
+      // Save PDF with a proper name
+      doc.save('air-price-navigator-itinerary.pdf');
+      
       setGeneratingPdf(false);
       toast({
-        title: "PDF generated",
-        description: "Your travel itinerary has been generated and is ready for download.",
+        title: "PDF downloaded",
+        description: "Your travel itinerary has been successfully downloaded.",
       });
-    }, 2000);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      setGeneratingPdf(false);
+      toast({
+        title: "Error generating PDF",
+        description: "There was an error generating your PDF. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const formatDate = (date: Date | undefined) => {
