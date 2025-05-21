@@ -38,8 +38,9 @@ const Auth = () => {
     
     try {
       await signIn(email, password);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
+      setError(error instanceof Error ? error.message : "Failed to sign in. Please check your credentials and try again.");
     } finally {
       setIsLoading(prev => ({ ...prev, login: false }));
     }
@@ -58,8 +59,9 @@ const Auth = () => {
     
     try {
       await signUp(email, password, name);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Signup error:", error);
+      setError(error instanceof Error ? error.message : "Failed to create account. Please try again.");
     } finally {
       setIsLoading(prev => ({ ...prev, signup: false }));
     }
@@ -69,8 +71,15 @@ const Auth = () => {
     setIsLoading(prev => ({ ...prev, google: true }));
     try {
       await signInWithGoogle();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Google login error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to sign in with Google. Please try again.";
+      setError(errorMessage);
+      
+      // If it's a popup error, suggest trying the redirect method
+      if (error instanceof Error && error.message.includes('popup')) {
+        setError(prev => prev + " If the popup was blocked, please allow popups and try again.");
+      }
     } finally {
       setIsLoading(prev => ({ ...prev, google: false }));
     }
@@ -97,6 +106,8 @@ const Auth = () => {
             </div>
             <h1 className="text-3xl font-bold">Welcome to SkyPredict</h1>
             <p className="text-muted-foreground mt-2">Sign in to access India's best flight deals</p>
+            
+
           </div>
           
           <Card className="border-2">
