@@ -9,15 +9,30 @@ import { useBookingContext } from "@/contexts/BookingContext";
 import { useToast } from "@/hooks/use-toast";
 import PaymentSystem from "@/components/PaymentSystem";
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
-import { UserOptions } from 'jspdf-autotable';
+// Import autoTable with dynamic import to handle CommonJS module
+import autoTable from 'jspdf-autotable';
+
+// Extend jsPDF types to include autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    lastAutoTable: {
+      finalY: number;
+    };
+  }
+}
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Define jsPDF module augmentation to include autoTable
+// Type for toast options
+type ToastOptions = {
+  title: string;
+  description: string;
+  variant?: 'default' | 'destructive' | 'success';
+};
+
+// Extend jsPDF types to include autoTable
 declare module 'jspdf' {
   interface jsPDF {
-    autoTable: (options: UserOptions) => jsPDF;
     lastAutoTable: {
       finalY: number;
     };
@@ -69,6 +84,15 @@ const BookingConfirmation: React.FC = () => {
       // Create a new PDF document
       const doc = new jsPDF();
       
+      // Set document properties
+      doc.setProperties({
+        title: `Itinerary - ${bookingId}`,
+        subject: 'Travel Itinerary',
+        author: 'Air Price Navigator',
+        keywords: 'itinerary, booking, travel',
+        creator: 'Air Price Navigator'
+      });
+      
       // Add title and header
       doc.setFillColor(0, 96, 168); // Air Blue color
       doc.rect(0, 0, 210, 40, 'F');
@@ -95,7 +119,7 @@ const BookingConfirmation: React.FC = () => {
         doc.text('Flight Details', 20, yPos);
         yPos += 10;
         
-        doc.autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Detail', 'Information']],
           body: [
@@ -124,7 +148,7 @@ const BookingConfirmation: React.FC = () => {
         doc.text('Hotel Details', 20, yPos);
         yPos += 10;
         
-        doc.autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Detail', 'Information']],
           body: [
@@ -151,7 +175,7 @@ const BookingConfirmation: React.FC = () => {
         doc.text('Hostel Details', 20, yPos);
         yPos += 10;
         
-        doc.autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Detail', 'Information']],
           body: [
@@ -178,7 +202,7 @@ const BookingConfirmation: React.FC = () => {
         doc.text('Ground Transport Details', 20, yPos);
         yPos += 10;
         
-        doc.autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Detail', 'Information']],
           body: [
@@ -227,7 +251,7 @@ const BookingConfirmation: React.FC = () => {
       paymentRows.push(['Subtotal', `₹${totalAmount.toLocaleString('en-IN')}`]);
       paymentRows.push(['Taxes & Fees (18%)', `₹${taxes.toLocaleString('en-IN')}`]);
       
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         body: paymentRows,
         theme: 'plain',
